@@ -14,6 +14,7 @@ export default defineConfig({
         policies: resolve(__dirname, 'policies.html'),
         contact: resolve(__dirname, 'contact.html'),
         donate: resolve(__dirname, 'donate.html'),
+        donateSuccess: resolve(__dirname, 'donate-success.html'),
       },
     },
   },

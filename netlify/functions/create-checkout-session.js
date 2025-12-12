@@ -50,8 +50,8 @@ exports.handler = async (event) => {
         },
       ],
       mode: isMonthly ? 'subscription' : 'payment',
-      success_url: `${process.env.SITE_URL || 'https://storied-pika-7c404d.netlify.app'}/donate/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.SITE_URL || 'https://storied-pika-7c404d.netlify.app'}/donate`,
+      success_url: `${process.env.SITE_URL || 'https://storied-pika-7c404d.netlify.app'}/donate-success.html?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.SITE_URL || 'https://storied-pika-7c404d.netlify.app'}/donate.html`,
       metadata: {
         donation_type: isMonthly ? 'monthly' : 'one-time',
         charity: 'MEPIE Foundation',

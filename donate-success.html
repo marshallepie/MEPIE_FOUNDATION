@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thank You for Your Donation - MEPIE Foundation</title>
+  <meta name="description" content="Thank you for supporting MEPIE Foundation">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/src/css/main.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Header -->
+  <header class="site-header">
+    <div class="container">
+      <div class="header-content">
+        <div class="logo">
+          <a href="/index.html">MEPIE Foundation</a>
+        </div>
+
+        <nav class="main-nav" aria-label="Main navigation">
+          <ul>
+            <li><a href="/index.html">Home</a></li>
+            <li><a href="/about.html">About</a></li>
+            <li><a href="/projects.html">Projects</a></li>
+            <li><a href="/governance.html">Governance</a></li>
+            <li><a href="/financial-transparency.html">Transparency</a></li>
+            <li><a href="/contact.html">Contact</a></li>
+            <li><a href="/donate.html" class="btn btn-primary btn-sm">Donate</a></li>
+          </ul>
+        </nav>
+
+        <button class="mobile-menu-toggle" aria-expanded="false" aria-label="Toggle menu">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Navigation -->
+    <nav class="mobile-nav" aria-label="Mobile navigation">
+      <ul>
+        <li><a href="/index.html">Home</a></li>
+        <li><a href="/about.html">About</a></li>
+        <li><a href="/projects.html">Projects</a></li>
+        <li><a href="/governance.html">Governance</a></li>
+        <li><a href="/financial-transparency.html">Transparency</a></li>
+        <li><a href="/contact.html">Contact</a></li>
+        <li><a href="/donate.html">Donate</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- Main Content -->
+  <main>
+    <!-- Success Message Section -->
+    <section class="section-padding bg-light">
+      <div class="container" style="max-width: 800px;">
+        <div class="text-center mb-6">
+          <!-- Success Icon -->
+          <div style="font-size: 4rem; margin-bottom: var(--space-4); color: var(--color-success, #10b981);">
+            ✓
+          </div>
+
+          <h1 class="mb-3">Thank You for Your Generous Donation!</h1>
+
+          <p class="lead mb-5">
+            Your donation has been successfully processed. You should receive a confirmation email from Stripe shortly.
+          </p>
+
+          <div class="card" style="text-align: left; padding: var(--space-5); margin-bottom: var(--space-5);">
+            <h2 style="font-size: var(--text-xl); margin-bottom: var(--space-3);">What Happens Next?</h2>
+
+            <ol style="line-height: 1.8; padding-left: var(--space-4);">
+              <li><strong>Email Receipt:</strong> You'll receive a detailed receipt from Stripe with your donation details.</li>
+              <li><strong>Financial Transparency:</strong> Your donation will appear in our next <a href="/financial-transparency.html">monthly financial report</a> (names kept anonymous).</li>
+              <li><strong>Impact Updates:</strong> We'll share regular updates about how your donation is making a difference.</li>
+              <li><strong>Questions?</strong> Contact us at <a href="mailto:contact@mepie-foundation.org">contact@mepie-foundation.org</a></li>
+            </ol>
+          </div>
+
+          <div class="card bg-primary" style="padding: var(--space-5); color: white; margin-bottom: var(--space-5);">
+            <h2 style="font-size: var(--text-xl); margin-bottom: var(--space-3); color: white;">Your Donation Creates a Ripple Effect</h2>
+            <p style="color: rgba(255, 255, 255, 0.95); margin-bottom: 0;">
+              Thanks to your support, we can continue empowering individuals through education and training—creating a ripple effect where each person we help becomes capable of uplifting many others. Your compassion is a practical tool for building stronger communities.
+            </p>
+          </div>
+
+          <div style="display: flex; gap: var(--space-3); justify-content: center; flex-wrap: wrap;">
+            <a href="/index.html" class="btn btn-primary btn-lg">Return Home</a>
+            <a href="/projects.html" class="btn btn-outline btn-lg">View Our Projects</a>
+          </div>
+        </div>
+
+        <!-- Session ID (for reference) -->
+        <div style="margin-top: var(--space-6); padding: var(--space-4); background: var(--color-background-alt); border-radius: 8px; text-align: center;">
+          <p style="font-size: var(--text-sm); color: var(--color-text-light); margin-bottom: var(--space-2);">
+            <strong>Transaction Reference:</strong>
+          </p>
+          <p id="session-id" style="font-family: monospace; font-size: var(--text-sm); color: var(--color-text-light); word-break: break-all;">
+            <!-- Session ID will be inserted here by JavaScript -->
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Call to Action -->
+    <section class="section-padding">
+      <div class="container text-center">
+        <h2 class="mb-4">Help Us Spread the Word</h2>
+        <p class="lead mb-5">
+          Share our mission with your network and help us reach more people who want to make a difference.
+        </p>
+        <div style="display: flex; gap: var(--space-3); justify-content: center; flex-wrap: wrap;">
+          <a href="https://twitter.com/intent/tweet?text=I%20just%20donated%20to%20@MEPIEFoundation%20to%20support%20technical%20education%20in%20underserved%20communities!&url=https://storied-pika-7c404d.netlify.app" target="_blank" rel="noopener" class="btn btn-outline">Share on Twitter</a>
+          <a href="https://www.facebook.com/sharer/sharer.php?u=https://storied-pika-7c404d.netlify.app" target="_blank" rel="noopener" class="btn btn-outline">Share on Facebook</a>
+          <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://storied-pika-7c404d.netlify.app" target="_blank" rel="noopener" class="btn btn-outline">Share on LinkedIn</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-section">
+          <h3>MEPIE Foundation</h3>
+          <p>A UK Charitable Incorporated Organisation</p>
+          <p><strong>Charity Registration:</strong> [Pending]</p>
+        </div>
+
+        <div class="footer-section">
+          <h4>Quick Links</h4>
+          <ul>
+            <li><a href="/about.html">About Us</a></li>
+            <li><a href="/projects.html">Our Projects</a></li>
+            <li><a href="/governance.html">Governance</a></li>
+            <li><a href="/financial-transparency.html">Financial Transparency</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-section">
+          <h4>Legal</h4>
+          <ul>
+            <li><a href="/governing-document.html">Governing Document</a></li>
+            <li><a href="/policies.html">Policies</a></li>
+            <li><a href="/contact.html">Contact</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-section">
+          <h4>Connect</h4>
+          <p>Email: <a href="mailto:contact@mepie-foundation.org">contact@mepie-foundation.org</a></p>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>&copy; 2024 MEPIE Foundation. All rights reserved.</p>
+        <p>Registered in England and Wales</p>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module" src="/src/js/main.js"></script>
+  <script>
+    // Extract and display session ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session_id');
+
+    if (sessionId) {
+      document.getElementById('session-id').textContent = sessionId;
+    } else {
+      document.getElementById('session-id').textContent = 'No session ID found';
+    }
+  </script>
+</body>
+</html>
