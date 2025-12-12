@@ -1,0 +1,31 @@
+{
+  "name": "mepie-foundation",
+  "version": "1.0.0",
+  "description": "MEPIE Foundation - UK Charitable Incorporated Organisation website",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "format": "prettier --write \"src/**/*.{html,css,js}\"",
+    "lighthouse": "lighthouse http://localhost:4173 --view"
+  },
+  "dependencies": {
+    "stripe": "^14.25.0"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.38.1",
+    "prettier": "^3.1.0",
+    "vite": "^5.0.0"
+  },
+  "keywords": [
+    "charity",
+    "education",
+    "cameroon",
+    "technical-training",
+    "nonprofit"
+  ],
+  "author": "MEPIE Foundation",
+  "license": "UNLICENSED",
+  "private": true
+}

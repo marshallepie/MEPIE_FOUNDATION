@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60">
+  <!-- Icon -->
+  <circle cx="30" cy="30" r="25" fill="#1a5490"/>
+  <text x="30" y="40" font-family="Arial, sans-serif" font-size="30" font-weight="bold" fill="white" text-anchor="middle">M</text>
+
+  <!-- Text -->
+  <text x="65" y="38" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#1a5490">MEPIE</text>
+  <text x="65" y="52" font-family="Arial, sans-serif" font-size="10" fill="#5a6c7d">FOUNDATION</text>
+</svg>

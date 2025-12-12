@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400" viewBox="0 0 800 400">
+  <rect width="800" height="400" fill="#f0f0f0"/>
+  <rect x="200" y="100" width="400" height="200" fill="#1a5490" opacity="0.2"/>
+  <text x="400" y="190" font-family="Arial" font-size="24" font-weight="bold" fill="#1a5490" text-anchor="middle">ME Technical School</text>
+  <text x="400" y="220" font-family="Arial" font-size="16" fill="#666" text-anchor="middle">Yaounde, Cameroon</text>
+  <text x="400" y="245" font-family="Arial" font-size="12" fill="#999" text-anchor="middle">Project photo coming soon</text>
+</svg>
