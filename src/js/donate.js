@@ -161,8 +161,8 @@ function showManualDonationInstructions() {
       <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
         <p style="margin-bottom: 10px;"><strong>Account Name:</strong> MEPIE Foundation</p>
         <p style="margin-bottom: 10px;"><strong>Bank:</strong> NatWest Bank</p>
-        <p style="margin-bottom: 10px;"><strong>Sort Code:</strong> [To be provided]</p>
-        <p style="margin-bottom: 10px;"><strong>Account Number:</strong> [To be provided]</p>
+        <p style="margin-bottom: 10px;"><strong>Sort Code:</strong> 60-18-20</p>
+        <p style="margin-bottom: 10px;"><strong>Account Number:</strong> 18174078</p>
         <p style="margin-bottom: 0;"><strong>Amount:</strong> £${(selectedAmount / 100).toFixed(2)}</p>
       </div>
 
