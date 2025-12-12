@@ -3,15 +3,457 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MEPIE Foundation - Page Coming Soon</title>
+  <title>Our Projects - MEPIE Foundation</title>
+  <meta name="description" content="Learn about the ME Technical School project in Yaoundé, Cameroon">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="/src/css/main.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="container section text-center">
-    <h1>Coming Soon</h1>
-    <p class="lead">This page is under construction.</p>
-    <a href="/" class="btn btn-primary">Return Home</a>
-  </div>
-  <script src="/src/js/main.js" type="module"></script>
+  <!-- Header -->
+  <header class="site-header">
+    <div class="container">
+      <div class="header-content">
+        <div class="logo">
+          <a href="/index.html">MEPIE Foundation</a>
+        </div>
+
+        <nav class="main-nav" aria-label="Main navigation">
+          <ul>
+            <li><a href="/index.html">Home</a></li>
+            <li><a href="/about.html">About</a></li>
+            <li><a href="/projects.html" class="active">Projects</a></li>
+            <li><a href="/governance.html">Governance</a></li>
+            <li><a href="/financial-transparency.html">Transparency</a></li>
+            <li><a href="/contact.html">Contact</a></li>
+            <li><a href="/donate.html" class="btn btn-primary btn-sm">Donate</a></li>
+          </ul>
+        </nav>
+
+        <button class="mobile-menu-toggle" aria-expanded="false" aria-label="Toggle menu">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Navigation -->
+    <nav class="mobile-nav" aria-label="Mobile navigation">
+      <ul>
+        <li><a href="/index.html">Home</a></li>
+        <li><a href="/about.html">About</a></li>
+        <li><a href="/projects.html">Projects</a></li>
+        <li><a href="/governance.html">Governance</a></li>
+        <li><a href="/financial-transparency.html">Transparency</a></li>
+        <li><a href="/contact.html">Contact</a></li>
+        <li><a href="/donate.html">Donate</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- Main Content -->
+  <main>
+    <!-- Page Header -->
+    <section class="hero" style="min-height: 400px; background: linear-gradient(135deg, var(--color-primary) 0%, #2563a8 100%);">
+      <div class="container">
+        <div class="hero-content text-center" style="color: white;">
+          <h1 style="color: white;">Our Projects</h1>
+          <p class="lead" style="color: rgba(255, 255, 255, 0.95); max-width: 800px; margin: 0 auto;">
+            Empowering communities through practical education and skills development
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Project: ME Technical School -->
+    <section class="section-padding">
+      <div class="container" style="max-width: 1100px;">
+        <div class="text-center mb-6">
+          <span style="display: inline-block; padding: 0.5rem 1rem; background: var(--color-secondary); color: white; border-radius: 20px; font-size: var(--text-sm); font-weight: 600; margin-bottom: var(--space-3);">
+            FLAGSHIP PROJECT
+          </span>
+          <h2 class="mb-3">ME Technical School</h2>
+          <p class="lead" style="color: var(--color-text-light);">Yaoundé, Cameroon</p>
+        </div>
+
+        <!-- Project Overview -->
+        <div class="card mb-5" style="padding: var(--space-6); background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);">
+          <h3 class="mb-4" style="color: var(--color-primary);">Project Mission</h3>
+          <p style="font-size: var(--text-lg); line-height: 1.8; margin-bottom: var(--space-4);">
+            Transforming a <strong>20m × 20m plot of land</strong> gifted by the Ambassador's family into a
+            <strong>technical academy</strong> providing <strong>free electrical and solar installation training</strong>
+            to underprivileged youth in Yaoundé, Cameroon.
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div style="text-align: center; padding: var(--space-4); background: white; border-radius: 8px;">
+              <div style="font-size: 2rem; color: var(--color-secondary); margin-bottom: var(--space-2);">📍</div>
+              <h4 style="font-size: var(--text-base); font-weight: 600; margin-bottom: var(--space-1);">Location</h4>
+              <p style="font-size: var(--text-sm); color: var(--color-text-light);">Yaoundé, Cameroon</p>
+            </div>
+            <div style="text-align: center; padding: var(--space-4); background: white; border-radius: 8px;">
+              <div style="font-size: 2rem; color: var(--color-secondary); margin-bottom: var(--space-2);">🎓</div>
+              <h4 style="font-size: var(--text-base); font-weight: 600; margin-bottom: var(--space-1);">First Cohort</h4>
+              <p style="font-size: var(--text-sm); color: var(--color-text-light);">6-10 Apprentices</p>
+            </div>
+            <div style="text-align: center; padding: var(--space-4); background: white; border-radius: 8px;">
+              <div style="font-size: 2rem; color: var(--color-secondary); margin-bottom: var(--space-2);">💰</div>
+              <h4 style="font-size: var(--text-base); font-weight: 600; margin-bottom: var(--space-1);">Cost</h4>
+              <p style="font-size: var(--text-sm); color: var(--color-text-light);">100% Free Training</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Image Gallery -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+          <div style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            <img src="/public/images/projects/me-technical-school/ME_Technical_School_1.jpg" alt="ME Technical School - Site View" style="width: 100%; height: 300px; object-fit: cover;">
+          </div>
+          <div style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            <img src="/public/images/projects/me-technical-school/ME_Technical_School_2.jpg" alt="ME Technical School - Training Area" style="width: 100%; height: 300px; object-fit: cover;">
+          </div>
+          <div style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            <img src="/public/images/projects/me-technical-school/ME_Technical_School_3.jpg" alt="ME Technical School - Infrastructure" style="width: 100%; height: 300px; object-fit: cover;">
+          </div>
+          <div style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            <img src="/public/images/projects/me-technical-school/ME_Technical_School_4.jpg" alt="ME Technical School - Equipment" style="width: 100%; height: 300px; object-fit: cover;">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Phase 1 Completed -->
+    <section class="section-padding bg-light">
+      <div class="container" style="max-width: 1000px;">
+        <h2 class="text-center mb-5">Phase 1: Site Preparation - COMPLETED ✓</h2>
+        <p class="text-center lead mb-5" style="color: var(--color-text-light);">
+          2021-2022 - Foundation established and site secured
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div class="card" style="padding: var(--space-5);">
+            <div style="width: 60px; height: 60px; background: var(--color-secondary); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: var(--space-3); color: white; font-size: 1.5rem; font-weight: bold;">✓</div>
+            <h3 class="mb-3" style="font-size: var(--text-xl); color: var(--color-primary);">Land Security</h3>
+            <p style="line-height: 1.7;">
+              Site fully secured with proper legal documentation and bamboo fencing installation to protect the property.
+            </p>
+          </div>
+
+          <div class="card" style="padding: var(--space-5);">
+            <div style="width: 60px; height: 60px; background: var(--color-secondary); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: var(--space-3); color: white; font-size: 1.5rem; font-weight: bold;">✓</div>
+            <h3 class="mb-3" style="font-size: var(--text-xl); color: var(--color-primary);">Water Supply</h3>
+            <p style="line-height: 1.7;">
+              Functioning borehole established, providing reliable water supply for the training facility.
+            </p>
+          </div>
+
+          <div class="card" style="padding: var(--space-5);">
+            <div style="width: 60px; height: 60px; background: var(--color-secondary); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: var(--space-3); color: white; font-size: 1.5rem; font-weight: bold;">✓</div>
+            <h3 class="mb-3" style="font-size: var(--text-xl); color: var(--color-primary);">Perimeter Fencing</h3>
+            <p style="line-height: 1.7;">
+              Bamboo fencing completed around the entire 20m × 20m plot for security and privacy.
+            </p>
+          </div>
+
+          <div class="card" style="padding: var(--space-5);">
+            <div style="width: 60px; height: 60px; background: var(--color-secondary); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: var(--space-3); color: white; font-size: 1.5rem; font-weight: bold;">✓</div>
+            <h3 class="mb-3" style="font-size: var(--text-xl); color: var(--color-primary);">Legal Documentation</h3>
+            <p style="line-height: 1.7;">
+              All necessary legal paperwork completed, ensuring proper ownership and operational clearance.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Phase 2: What's Needed -->
+    <section class="section-padding">
+      <div class="container" style="max-width: 1000px;">
+        <h2 class="text-center mb-3">Phase 2: Building the Academy</h2>
+        <p class="text-center lead mb-5" style="color: var(--color-text-light);">
+          What we need to launch training programs
+        </p>
+
+        <!-- Funding Requirement -->
+        <div class="card mb-5" style="padding: var(--space-6); background: var(--color-primary); color: white; text-align: center;">
+          <h3 class="mb-3" style="color: white; font-size: var(--text-2xl);">Total Project Budget</h3>
+          <p style="font-size: 3rem; font-weight: 800; margin-bottom: var(--space-2); color: var(--color-secondary);">
+            £29,400 – £35,400
+          </p>
+          <p style="font-size: var(--text-lg); color: rgba(255, 255, 255, 0.95);">
+            To complete construction, shipping, setup, and launch the first cohort of apprentices
+          </p>
+        </div>
+
+        <!-- Funding Breakdown -->
+        <h3 class="mb-4 text-center">Funding Breakdown</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="card" style="padding: var(--space-5); border-left: 4px solid var(--color-secondary);">
+            <h4 class="mb-2" style="font-size: var(--text-lg); color: var(--color-primary);">Container Construction (UK)</h4>
+            <p class="mb-2" style="font-size: var(--text-2xl); font-weight: 700; color: var(--color-secondary);">£10,400 – £13,800</p>
+            <p style="font-size: var(--text-sm); line-height: 1.6; color: var(--color-text-light);">
+              40ft high-cube shipping container converted into fully equipped training workshop with integrated electrical systems
+            </p>
+          </div>
+
+          <div class="card" style="padding: var(--space-5); border-left: 4px solid var(--color-secondary);">
+            <h4 class="mb-2" style="font-size: var(--text-lg); color: var(--color-primary);">Shipping to Cameroon</h4>
+            <p class="mb-2" style="font-size: var(--text-2xl); font-weight: 700; color: var(--color-secondary);">£5,500 – £7,300</p>
+            <p style="font-size: var(--text-sm); line-height: 1.6; color: var(--color-text-light);">
+              International freight from UK to Yaoundé, including customs clearance and port handling
+            </p>
+          </div>
+
+          <div class="card" style="padding: var(--space-5); border-left: 4px solid var(--color-secondary);">
+            <h4 class="mb-2" style="font-size: var(--text-lg); color: var(--color-primary);">Deployment & Setup</h4>
+            <p class="mb-2" style="font-size: var(--text-2xl); font-weight: 700; color: var(--color-secondary);">£1,200 – £2,100</p>
+            <p style="font-size: var(--text-sm); line-height: 1.6; color: var(--color-text-light);">
+              Site preparation, container positioning, security installation, and utility connections
+            </p>
+          </div>
+
+          <div class="card" style="padding: var(--space-5); border-left: 4px solid var(--color-secondary);">
+            <h4 class="mb-2" style="font-size: var(--text-lg); color: var(--color-primary);">Initial Apprenticeships</h4>
+            <p class="mb-2" style="font-size: var(--text-2xl); font-weight: 700; color: var(--color-secondary);">£1,300 – £2,200</p>
+            <p style="font-size: var(--text-sm); line-height: 1.6; color: var(--color-text-light);">
+              Launch costs for first cohort: materials, tools, instructor fees, and apprentice support
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Training Programs -->
+    <section class="section-padding bg-light">
+      <div class="container" style="max-width: 1000px;">
+        <h2 class="text-center mb-5">Training Programs</h2>
+        <p class="text-center lead mb-6" style="color: var(--color-text-light); max-width: 800px; margin-left: auto; margin-right: auto;">
+          Comprehensive technical skills training designed to create employable electricians and solar technicians
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div class="card" style="padding: var(--space-5);">
+            <div style="font-size: 2.5rem; margin-bottom: var(--space-3);">⚡</div>
+            <h3 class="mb-3" style="font-size: var(--text-xl); color: var(--color-primary);">Electrical Installation</h3>
+            <p style="line-height: 1.7;">
+              Complete electrical wiring, circuit design, fault diagnosis, and repair skills for residential and commercial applications.
+            </p>
+          </div>
+
+          <div class="card" style="padding: var(--space-5);">
+            <div style="font-size: 2.5rem; margin-bottom: var(--space-3);">☀️</div>
+            <h3 class="mb-3" style="font-size: var(--text-xl); color: var(--color-primary);">Solar PV Systems</h3>
+            <p style="line-height: 1.7;">
+              Solar panel installation, system sizing, inverter configuration, and maintenance for off-grid and grid-tied systems.
+            </p>
+          </div>
+
+          <div class="card" style="padding: var(--space-5);">
+            <div style="font-size: 2.5rem; margin-bottom: var(--space-3);">🔋</div>
+            <h3 class="mb-3" style="font-size: var(--text-xl); color: var(--color-primary);">Battery Storage</h3>
+            <p style="line-height: 1.7;">
+              Battery bank configuration, charge controller programming, and energy storage system optimization.
+            </p>
+          </div>
+
+          <div class="card" style="padding: var(--space-5);">
+            <div style="font-size: 2.5rem; margin-bottom: var(--space-3);">🦺</div>
+            <h3 class="mb-3" style="font-size: var(--text-xl); color: var(--color-primary);">Safety Protocols</h3>
+            <p style="line-height: 1.7;">
+              Electrical safety standards, personal protective equipment use, risk assessment, and emergency procedures.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Infrastructure -->
+    <section class="section-padding">
+      <div class="container" style="max-width: 1000px;">
+        <h2 class="text-center mb-5">Training Infrastructure</h2>
+
+        <div class="card mb-5" style="padding: var(--space-6);">
+          <h3 class="mb-4" style="color: var(--color-primary);">The Container Workshop</h3>
+          <p class="lead mb-4">
+            A fully equipped, self-contained training centre built from a <strong>40ft high-cube shipping container</strong>.
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <h4 class="mb-3" style="font-size: var(--text-lg);">Features Include:</h4>
+              <ul style="line-height: 1.8;">
+                <li>Integrated workshop and training space</li>
+                <li>Complete electrical systems and distribution boards</li>
+                <li>Solar demonstration units</li>
+                <li>Tool storage and workbenches</li>
+                <li>Security measures and access control</li>
+                <li>Proper ventilation and lighting</li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="mb-3" style="font-size: var(--text-lg);">Why a Container?</h4>
+              <ul style="line-height: 1.8;">
+                <li><strong>Durable:</strong> Weather-resistant steel construction</li>
+                <li><strong>Secure:</strong> Lockable and theft-resistant</li>
+                <li><strong>Mobile:</strong> Can be relocated if needed</li>
+                <li><strong>Cost-effective:</strong> Lower cost than traditional building</li>
+                <li><strong>Quick deployment:</strong> Arrive ready to use</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Long-term Vision -->
+    <section class="section-padding bg-light">
+      <div class="container" style="max-width: 1000px;">
+        <h2 class="text-center mb-3">Long-term Vision</h2>
+        <p class="text-center lead mb-5" style="color: var(--color-text-light);">
+          Expanding beyond electrical training to create a comprehensive skills development campus
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div class="card" style="padding: var(--space-5); text-align: center;">
+            <div style="font-size: 2.5rem; margin-bottom: var(--space-3);">🛠️</div>
+            <h3 class="mb-3" style="font-size: var(--text-lg); color: var(--color-primary);">Additional Workshops</h3>
+            <p style="line-height: 1.7; font-size: var(--text-sm);">
+              Carpentry, plumbing, masonry, and other trades to provide diverse skill development opportunities
+            </p>
+          </div>
+
+          <div class="card" style="padding: var(--space-5); text-align: center;">
+            <div style="font-size: 2.5rem; margin-bottom: var(--space-3);">☀️</div>
+            <h3 class="mb-3" style="font-size: var(--text-lg); color: var(--color-primary);">Solar Demo Yards</h3>
+            <p style="line-height: 1.7; font-size: var(--text-sm);">
+              Live solar installations for hands-on training and community education on renewable energy
+            </p>
+          </div>
+
+          <div class="card" style="padding: var(--space-5); text-align: center;">
+            <div style="font-size: 2.5rem; margin-bottom: var(--space-3);">🏠</div>
+            <h3 class="mb-3" style="font-size: var(--text-lg); color: var(--color-primary);">Accommodation Units</h3>
+            <p style="line-height: 1.7; font-size: var(--text-sm);">
+              Housing for out-of-town apprentices, enabling access for students from rural areas
+            </p>
+          </div>
+
+          <div class="card" style="padding: var(--space-5); text-align: center;">
+            <div style="font-size: 2.5rem; margin-bottom: var(--space-3);">📜</div>
+            <h3 class="mb-3" style="font-size: var(--text-lg); color: var(--color-primary);">Government Accreditation</h3>
+            <p style="line-height: 1.7; font-size: var(--text-sm);">
+              Official recognition and certification programs in partnership with Cameroonian authorities
+            </p>
+          </div>
+
+          <div class="card" style="padding: var(--space-5); text-align: center;">
+            <div style="font-size: 2.5rem; margin-bottom: var(--space-3);">🤝</div>
+            <h3 class="mb-3" style="font-size: var(--text-lg); color: var(--color-primary);">Commercial Partnerships</h3>
+            <p style="line-height: 1.7; font-size: var(--text-sm);">
+              Collaborations with local businesses to provide job placements for graduates
+            </p>
+          </div>
+
+          <div class="card" style="padding: var(--space-5); text-align: center;">
+            <div style="font-size: 2.5rem; margin-bottom: var(--space-3);">🌍</div>
+            <h3 class="mb-3" style="font-size: var(--text-lg); color: var(--color-primary);">Community Impact</h3>
+            <p style="line-height: 1.7; font-size: var(--text-sm);">
+              Creating a ripple effect where each trained individual uplifts their entire community
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Call to Action -->
+    <section class="section-padding">
+      <div class="container text-center" style="max-width: 900px;">
+        <h2 class="mb-4">Help Us Launch This Project</h2>
+        <p class="lead mb-5">
+          Your donation will directly fund the construction, shipping, and launch of the ME Technical School,
+          providing life-changing opportunities for underprivileged youth in Cameroon.
+        </p>
+        <div class="card mb-5" style="padding: var(--space-5); background: var(--color-background-alt);">
+          <p style="font-size: var(--text-lg); line-height: 1.8; margin-bottom: var(--space-3);">
+            <strong>Every pound makes a difference:</strong>
+          </p>
+          <ul style="text-align: left; max-width: 600px; margin: 0 auto; line-height: 1.8;">
+            <li><strong>£25</strong> provides basic tools for one apprentice</li>
+            <li><strong>£100</strong> covers materials for hands-on training sessions</li>
+            <li><strong>£500</strong> supports one apprentice through the entire program</li>
+            <li><strong>£5,000+</strong> sponsors a major component of the container or shipping</li>
+          </ul>
+        </div>
+        <div style="display: flex; gap: var(--space-3); justify-content: center; flex-wrap: wrap;">
+          <a href="/donate.html" class="btn btn-primary btn-lg" style="font-size: var(--text-lg); padding: 1rem 2rem;">
+            Donate to This Project
+          </a>
+          <a href="/contact.html" class="btn btn-outline btn-lg" style="font-size: var(--text-lg); padding: 1rem 2rem;">
+            Partnership Inquiries
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Project Contact -->
+    <section class="section-padding bg-light">
+      <div class="container text-center" style="max-width: 700px;">
+        <h2 class="mb-4">Questions About This Project?</h2>
+        <p class="lead mb-4">
+          We're happy to provide more information, arrange site visits, or discuss partnership opportunities.
+        </p>
+        <p style="font-size: var(--text-lg); margin-bottom: var(--space-4);">
+          <strong>Project Contact:</strong><br>
+          <a href="mailto:me@marshallepie.com" style="color: var(--color-primary); font-weight: 600;">me@marshallepie.com</a>
+        </p>
+        <a href="/about.html" class="btn btn-outline">Learn More About MEPIE Foundation →</a>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-section">
+          <h3>MEPIE Foundation</h3>
+          <p>A UK Charitable Incorporated Organisation</p>
+          <p><strong>Charity Registration:</strong> [Pending]</p>
+        </div>
+
+        <div class="footer-section">
+          <h4>Quick Links</h4>
+          <ul>
+            <li><a href="/about.html">About Us</a></li>
+            <li><a href="/projects.html">Our Projects</a></li>
+            <li><a href="/governance.html">Governance</a></li>
+            <li><a href="/financial-transparency.html">Financial Transparency</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-section">
+          <h4>Legal</h4>
+          <ul>
+            <li><a href="/governing-document.html">Governing Document</a></li>
+            <li><a href="/policies.html">Policies</a></li>
+            <li><a href="/contact.html">Contact</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-section">
+          <h4>Connect</h4>
+          <p>Email: <a href="mailto:contact@mepie-foundation.org">contact@mepie-foundation.org</a></p>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>&copy; 2024 MEPIE Foundation. All rights reserved.</p>
+        <p>Registered in England and Wales</p>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module" src="/src/js/main.js"></script>
 </body>
 </html>
