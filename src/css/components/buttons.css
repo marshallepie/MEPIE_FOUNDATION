@@ -132,6 +132,23 @@
 }
 
 @media (max-width: 639px) {
+  /* Fix button overflow on mobile */
+  .btn {
+    white-space: normal;
+    max-width: 100%;
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .btn-lg {
+    padding: var(--space-2-5) var(--space-4);
+    font-size: var(--text-base);
+  }
+
+  .btn-donate {
+    padding: var(--space-2-5) var(--space-4);
+    font-size: var(--text-base);
+  }
+
   .btn-group {
     flex-direction: column;
   }

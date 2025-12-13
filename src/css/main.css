@@ -233,6 +233,20 @@
   color: var(--color-text);
 }
 
+/* Mobile Button Container Fixes */
+@media (max-width: 639px) {
+  /* Ensure button containers don't overflow */
+  div[style*="display: flex"] {
+    flex-wrap: wrap !important;
+  }
+
+  /* Fix CTA sections on mobile */
+  .cta-section .btn,
+  section .btn {
+    max-width: 100%;
+  }
+}
+
 /* Print Styles */
 @media print {
   .site-header,
