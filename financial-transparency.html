@@ -234,6 +234,38 @@
       border: 1px solid #ddd !important;
     }
 
+    /* Mobile calendar adjustments */
+    @media (max-width: 768px) {
+      .jcalendar-content {
+        min-width: 280px !important;
+        max-width: 90vw !important;
+        font-size: 14px !important;
+      }
+
+      .jcalendar {
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+      }
+
+      .jcalendar-table {
+        font-size: 12px !important;
+      }
+
+      .jcalendar-header {
+        padding: 8px !important;
+      }
+
+      .jcalendar-update select {
+        font-size: 12px !important;
+        padding: 4px !important;
+      }
+
+      .jcalendar-controls {
+        padding: 8px !important;
+      }
+    }
+
     .jcalendar-header {
       display: flex !important;
       justify-content: space-between !important;
@@ -311,8 +343,10 @@
       <button id="editBtn" class="btn btn-primary">Enable Editing</button>
       <button id="saveBtn" class="btn btn-secondary" disabled>Save Changes</button>
       <button id="exportBtn" class="btn btn-secondary">Export to CSV</button>
+      <button id="importBtn" class="btn btn-secondary" disabled>Import from CSV</button>
       <button id="exportPdfBtn" class="btn btn-secondary">Export to PDF</button>
       <button id="addRowBtn" class="btn btn-secondary" disabled>Add Row</button>
+      <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
     </div>
 
     <div class="tabs">

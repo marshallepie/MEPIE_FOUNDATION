@@ -19,16 +19,10 @@ function calculateNetIncome(amount, source) {
   return numAmount.toFixed(2);
 }
 
-// Sample initial data - with calculated net income
-const initialIncomingData = [
-  ['15-01-2024', '5000', 'GoFundMe', 'ME', '', 'Initial fundraiser campaign', 'Marshall Epie'],
-  ['01-02-2024', '2500', 'Stripe', 'AR', '', 'Direct donation', 'Aruna Ramineni'],
-];
+// Initial data - empty by default, data comes from localStorage
+const initialIncomingData = [];
 
-const initialOutgoingData = [
-  ['20-01-2024', '3000', 'ME Technical School', 'Equipment purchase', 'Education', 'Marshall Epie'],
-  ['05-02-2024', '500', 'Office Supplies Inc', 'Administrative supplies', 'Operations', 'Fitz Schroeder'],
-];
+const initialOutgoingData = [];
 
 // Load data from localStorage or use initial data
 function loadData(key, initialData) {
@@ -413,6 +407,7 @@ function setEditMode(enabled) {
 
   document.getElementById('saveBtn').disabled = !enabled;
   document.getElementById('addRowBtn').disabled = !enabled;
+  document.getElementById('importBtn').disabled = !enabled;
   document.getElementById('editBtn').textContent = enabled ? 'Disable Editing' : 'Enable Editing';
 
   if (enabled) {
@@ -597,6 +592,103 @@ function setupExportButton() {
         updateStatusMessage('View-only mode. Click "Enable Editing" to make changes (password required).', 'info');
       }
     }, 2000);
+  });
+}
+
+// Handle import from CSV button
+function setupImportButton() {
+  const importBtn = document.getElementById('importBtn');
+  const fileInput = document.getElementById('csvFileInput');
+
+  importBtn.addEventListener('click', () => {
+    if (!isEditMode) {
+      updateStatusMessage('Please enable editing mode before importing data.', 'warning');
+      return;
+    }
+    fileInput.click();
+  });
+
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const csv = event.target.result;
+        const lines = csv.split('\n').filter(line => line.trim());
+
+        // Skip header row and parse data
+        const data = lines.slice(1).map(line => {
+          // Handle CSV with quoted fields
+          const matches = line.match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g);
+          return matches ? matches.map(field => field.replace(/^"|"$/g, '').trim()) : [];
+        }).filter(row => row.length > 0);
+
+        if (data.length === 0) {
+          updateStatusMessage('CSV file is empty or invalid.', 'warning');
+          return;
+        }
+
+        // Determine which sheet to import to and validate column count
+        let sheet, storageKey, expectedColumns;
+        if (currentTab === 'incoming') {
+          sheet = incomingSheet[0];
+          storageKey = STORAGE_KEY_INCOMING;
+          expectedColumns = 7;
+
+          // Recalculate net income for imported data
+          data.forEach(row => {
+            if (row.length >= 3) {
+              let amount = row[1];
+              const source = row[2];
+
+              // Clean amount
+              if (amount) {
+                amount = String(amount).replace(/[£,\s]/g, '');
+              }
+
+              row[4] = calculateNetIncome(amount, source);
+            }
+          });
+        } else {
+          sheet = outgoingSheet[0];
+          storageKey = STORAGE_KEY_OUTGOING;
+          expectedColumns = 6;
+        }
+
+        // Validate column count
+        const invalidRows = data.filter(row => row.length !== expectedColumns);
+        if (invalidRows.length > 0) {
+          updateStatusMessage(`Warning: ${invalidRows.length} rows have incorrect column count and may not import correctly.`, 'warning');
+        }
+
+        // Clear existing data and load new data
+        sheet.setData(data);
+
+        // Save to localStorage
+        saveData(storageKey, data);
+
+        // Update totals
+        if (currentTab === 'incoming') {
+          updateTotalNetIncome();
+        } else {
+          updateTotalOutgoing();
+        }
+        updateBalance();
+
+        updateStatusMessage(`Successfully imported ${data.length} rows from CSV.`, 'success');
+
+        // Reset file input
+        fileInput.value = '';
+
+      } catch (error) {
+        console.error('Error importing CSV:', error);
+        updateStatusMessage('Error importing CSV file. Please check the format.', 'warning');
+      }
+    };
+
+    reader.readAsText(file);
   });
 }
 
@@ -786,6 +878,7 @@ function init() {
   setupSaveButton();
   setupAddRowButton();
   setupExportButton();
+  setupImportButton();
   setupExportPdfButton();
 
   updateStatusMessage('View-only mode. Click "Enable Editing" to make changes (password required).', 'info');

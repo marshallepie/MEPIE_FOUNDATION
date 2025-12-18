@@ -104,6 +104,7 @@ source: ['Education', 'Operations', 'Marketing', 'Infrastructure', 'Salaries', '
 - **Not synced**: Changes on one device won't appear on another
 - **Can be cleared**: Users clearing browser data will lose unsaved information
 - **Backup recommended**: Regularly export to CSV for backup
+- **Code changes don't affect data**: Rebuilding or committing code changes won't affect your saved data in localStorage, but viewing on a different device/browser will show empty spreadsheets until you import or re-enter data
 
 ### Future Enhancement Considerations
 For a production environment with multiple users, consider:
