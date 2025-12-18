@@ -3,15 +3,360 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MEPIE Foundation - Page Coming Soon</title>
+
+  <!-- Primary Meta Tags -->
+  <title>Financial Transparency - MEPIE Foundation</title>
+  <meta name="title" content="Financial Transparency - MEPIE Foundation">
+  <meta name="description" content="Complete financial transparency for all incoming and outgoing funds of the MEPIE Foundation. View our income, expenses, and how we allocate resources.">
+  <meta name="keywords" content="financial transparency, charity finances, MEPIE Foundation, accountability">
+
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="/src/css/main.css">
+  <!-- jspreadsheet CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jspreadsheet-ce@5.0.4/dist/jspreadsheet.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsuites@5.12.0/dist/jsuites.css">
+
+  <style>
+    .finance-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+    }
+
+    .finance-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .finance-header h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      color: var(--color-primary, #2c3e50);
+    }
+
+    .finance-header p {
+      font-size: 1.1rem;
+      color: var(--color-text-secondary, #666);
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      border-bottom: 2px solid #e0e0e0;
+      flex-wrap: wrap;
+    }
+
+    .tab-button {
+      padding: 0.75rem 1.5rem;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 500;
+      color: #666;
+      border-bottom: 3px solid transparent;
+      transition: all 0.3s;
+    }
+
+    .tab-button:hover {
+      color: var(--color-primary, #2c3e50);
+    }
+
+    .tab-button.active {
+      color: var(--color-primary, #2c3e50);
+      border-bottom-color: var(--color-primary, #2c3e50);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .spreadsheet-container {
+      margin: 2rem 0;
+      overflow-x: auto;
+      background: white;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .controls {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: all 0.3s;
+    }
+
+    .btn-primary {
+      background-color: var(--color-primary, #2c3e50);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      opacity: 0.9;
+    }
+
+    .btn-secondary {
+      background-color: #f0f0f0;
+      color: #333;
+    }
+
+    .btn-secondary:hover {
+      background-color: #e0e0e0;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .status-message {
+      padding: 0.75rem 1rem;
+      border-radius: 4px;
+      margin-bottom: 1rem;
+      font-size: 0.95rem;
+    }
+
+    .status-message.info {
+      background-color: #e3f2fd;
+      color: #1565c0;
+      border-left: 4px solid #1565c0;
+    }
+
+    .status-message.success {
+      background-color: #e8f5e9;
+      color: #2e7d32;
+      border-left: 4px solid #2e7d32;
+    }
+
+    .status-message.warning {
+      background-color: #fff3e0;
+      color: #ef6c00;
+      border-left: 4px solid #ef6c00;
+    }
+
+    #passwordModal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #passwordModal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      max-width: 400px;
+      width: 90%;
+    }
+
+    .modal-content h3 {
+      margin-top: 0;
+      margin-bottom: 1rem;
+    }
+
+    .modal-content input {
+      width: 100%;
+      padding: 0.75rem;
+      margin-bottom: 1rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+
+    .modal-buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: flex-end;
+    }
+
+    @media (max-width: 768px) {
+      .finance-header h1 {
+        font-size: 2rem;
+      }
+
+      .tabs {
+        overflow-x: auto;
+      }
+
+      .controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .btn {
+        width: 100%;
+      }
+    }
+
+    /* Fix calendar popup visibility */
+    .jcalendar {
+      z-index: 10000 !important;
+      position: fixed !important;
+    }
+
+    .jcalendar-backdrop {
+      z-index: 9999 !important;
+    }
+
+    .jcalendar-content {
+      min-width: 300px !important;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3) !important;
+      border: 1px solid #ddd !important;
+    }
+
+    .jcalendar-header {
+      display: flex !important;
+      justify-content: space-between !important;
+      align-items: center !important;
+      padding: 10px !important;
+      background: white !important;
+    }
+
+    .jcalendar-update {
+      display: flex !important;
+      gap: 10px !important;
+      width: 100% !important;
+    }
+
+    .jcalendar-update select {
+      flex: 1 !important;
+      min-width: 80px !important;
+      padding: 5px !important;
+      font-size: 14px !important;
+      border: 1px solid #ddd !important;
+    }
+
+    .jcalendar-selected {
+      background-color: var(--color-primary, #2c3e50) !important;
+      color: white !important;
+    }
+
+    /* Ensure tabs don't overlap calendar */
+    .tabs {
+      position: relative;
+      z-index: 1;
+    }
+
+    .tab-content {
+      position: relative;
+      z-index: 1;
+    }
+  </style>
 </head>
 <body>
-  <div class="container section text-center">
-    <h1>Coming Soon</h1>
-    <p class="lead">This page is under construction.</p>
-    <a href="/" class="btn btn-primary">Return Home</a>
+  <div class="finance-container">
+    <div class="finance-header">
+      <h1>Financial Transparency</h1>
+      <p>Complete transparency of all incoming and outgoing funds. Our commitment to accountability means every dollar is tracked and visible to our community.</p>
+    </div>
+
+    <div id="statusMessage" class="status-message info">
+      View-only mode. Click "Enable Editing" to make changes (password required).
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+      <!-- Total Net Income -->
+      <div style="background: #e8f5e9; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #2e7d32;">
+        <h3 style="margin: 0 0 0.5rem 0; color: #2e7d32; font-size: 1.1rem;">Total Net Income</h3>
+        <div style="font-size: 2rem; font-weight: bold; color: #1b5e20;" id="totalNetIncome">£ 0.00</div>
+        <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; color: #666;">After GoFundMe fees (3.31%)</p>
+      </div>
+
+      <!-- Total Outgoing -->
+      <div style="background: #ffebee; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #c62828;">
+        <h3 style="margin: 0 0 0.5rem 0; color: #c62828; font-size: 1.1rem;">Total Outgoing</h3>
+        <div style="font-size: 2rem; font-weight: bold; color: #b71c1c;" id="totalOutgoing">£ 0.00</div>
+        <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; color: #666;">All expenses and disbursements</p>
+      </div>
+
+      <!-- Balance -->
+      <div style="background: #e3f2fd; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #1565c0;">
+        <h3 style="margin: 0 0 0.5rem 0; color: #1565c0; font-size: 1.1rem;">Current Balance</h3>
+        <div style="font-size: 2rem; font-weight: bold; color: #0d47a1;" id="currentBalance">£ 0.00</div>
+        <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; color: #666;">Net Income - Total Outgoing</p>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="editBtn" class="btn btn-primary">Enable Editing</button>
+      <button id="saveBtn" class="btn btn-secondary" disabled>Save Changes</button>
+      <button id="exportBtn" class="btn btn-secondary">Export to CSV</button>
+      <button id="exportPdfBtn" class="btn btn-secondary">Export to PDF</button>
+      <button id="addRowBtn" class="btn btn-secondary" disabled>Add Row</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-button active" data-tab="incoming">Incoming Funds</button>
+      <button class="tab-button" data-tab="outgoing">Outgoing Funds</button>
+    </div>
+
+    <div id="incoming" class="tab-content active">
+      <div class="spreadsheet-container">
+        <div id="incomingSpreadsheet"></div>
+      </div>
+    </div>
+
+    <div id="outgoing" class="tab-content">
+      <div class="spreadsheet-container">
+        <div id="outgoingSpreadsheet"></div>
+      </div>
+    </div>
+
+    <div style="margin-top: 2rem; text-align: center;">
+      <a href="/" class="btn btn-secondary">Return Home</a>
+    </div>
   </div>
+
+  <!-- Password Modal -->
+  <div id="passwordModal">
+    <div class="modal-content">
+      <h3>Enter Password</h3>
+      <p>Please enter the password to enable editing:</p>
+      <input type="password" id="passwordInput" placeholder="Password">
+      <div class="modal-buttons">
+        <button id="cancelBtn" class="btn btn-secondary">Cancel</button>
+        <button id="submitPasswordBtn" class="btn btn-primary">Submit</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/src/js/main.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsuites@5.12.0/dist/jsuites.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspreadsheet-ce@5.0.4/dist/index.min.js"></script>
+  <script>
+    // Pass environment variable to the script
+    window.FINANCE_EDIT_PASSWORD = 'mepie2024admin';
+  </script>
+  <script src="/src/js/financial-transparency.js"></script>
 </body>
 </html>

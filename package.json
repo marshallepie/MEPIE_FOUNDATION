@@ -11,6 +11,8 @@
     "lighthouse": "lighthouse http://localhost:4173 --view"
   },
   "dependencies": {
+    "jspreadsheet-ce": "^5.0.4",
+    "jsuites": "^6.0.1",
     "stripe": "^14.25.0"
   },
   "devDependencies": {
