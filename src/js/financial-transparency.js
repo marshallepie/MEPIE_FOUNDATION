@@ -1,14 +1,300 @@
-// jspreadsheet is loaded globally via CDN
-const EDIT_PASSWORD = window.FINANCE_EDIT_PASSWORD || 'mepie2024admin';
-const STORAGE_KEY_INCOMING = 'mepie_incoming_funds';
-const STORAGE_KEY_OUTGOING = 'mepie_outgoing_funds';
+// ==================================================
+// MEPIE Financial Transparency - API-Integrated Version
+// ==================================================
 
+// Configuration
+const API_BASE = '/.netlify/functions';
+const EDIT_PASSWORD = window.FINANCE_EDIT_PASSWORD || 'mepie2024admin';
+
+// Session management
+let sessionToken = localStorage.getItem('mepie_session_token');
+let currentUserName = localStorage.getItem('mepie_current_user');
+let sessionExpiresAt = localStorage.getItem('mepie_session_expires');
+
+// Spreadsheet state
 let incomingSheet = null;
 let outgoingSheet = null;
 let isEditMode = false;
 let currentTab = 'incoming';
 
-const approvers = ['Marshall Epie', 'Aruna Ramineni', 'Fitz Schroeder'];
+// Data tracking for dirty rows (unsaved changes)
+const dirtyRows = {
+  incoming: new Set(),
+  outgoing: new Set()
+};
+
+// Valid options
+const approvers = ['Marshall Epie', 'Aruna Ramineni', 'Fitz Shrowder'];
+const sources = ['GoFundMe', 'Stripe', 'Bank Transfer', 'Check', 'Cash', 'Other'];
+const categories = ['Education', 'Operations', 'Marketing', 'Infrastructure', 'Salaries', 'Other'];
+
+// ==================================================
+// UI Helper Functions
+// ==================================================
+
+function showLoading(message = 'Loading...') {
+  const overlay = document.getElementById('loadingOverlay');
+  const messageEl = document.getElementById('loadingMessage');
+  if (messageEl) messageEl.textContent = message;
+  if (overlay) overlay.classList.add('active');
+}
+
+function hideLoading() {
+  const overlay = document.getElementById('loadingOverlay');
+  if (overlay) overlay.classList.remove('active');
+}
+
+function updateStatusMessage(message, type = 'info') {
+  const statusEl = document.getElementById('statusMessage');
+  if (statusEl) {
+    statusEl.textContent = message;
+    statusEl.className = `status-message ${type}`;
+  }
+}
+
+function updateCurrentUserBanner() {
+  const banner = document.getElementById('currentUserBanner');
+  const userNameEl = document.getElementById('currentUserName');
+  const sessionInfoEl = document.getElementById('sessionInfo');
+
+  if (!banner || !userNameEl) return;
+
+  if (isEditMode && currentUserName) {
+    banner.style.display = 'flex';
+    userNameEl.textContent = currentUserName;
+
+    if (sessionExpiresAt) {
+      const expiresDate = new Date(sessionExpiresAt);
+      const now = new Date();
+      const hoursLeft = Math.floor((expiresDate - now) / (1000 * 60 * 60));
+      sessionInfoEl.textContent = `Session expires in ${hoursLeft} hours`;
+    }
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+// ==================================================
+// API Functions
+// ==================================================
+
+async function apiRequest(endpoint, options = {}) {
+  const url = `${API_BASE}/${endpoint}`;
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || `HTTP ${response.status}`);
+    }
+
+    return data;
+  } catch (error) {
+    console.error(`API request failed: ${endpoint}`, error);
+    throw error;
+  }
+}
+
+async function authenticateUser(userName, password) {
+  try {
+    const result = await apiRequest('finance-auth', {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'login',
+        userName,
+        password
+      })
+    });
+
+    if (result.success) {
+      sessionToken = result.sessionToken;
+      currentUserName = result.userName;
+      sessionExpiresAt = result.expiresAt;
+
+      // Store in localStorage
+      localStorage.setItem('mepie_session_token', sessionToken);
+      localStorage.setItem('mepie_current_user', currentUserName);
+      localStorage.setItem('mepie_session_expires', sessionExpiresAt);
+
+      return { success: true };
+    }
+
+    return { success: false, error: result.error };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+async function validateSession() {
+  if (!sessionToken) return { valid: false };
+
+  try {
+    const result = await apiRequest('finance-auth', {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'validate',
+        sessionToken
+      })
+    });
+
+    if (result.valid) {
+      currentUserName = result.userName;
+      sessionExpiresAt = result.expiresAt;
+      return { valid: true, userName: result.userName };
+    }
+
+    // Session invalid, clear stored data
+    clearSession();
+    return { valid: false };
+  } catch (error) {
+    clearSession();
+    return { valid: false };
+  }
+}
+
+async function logoutUser() {
+  if (!sessionToken) return;
+
+  try {
+    await apiRequest('finance-auth', {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'logout',
+        sessionToken
+      })
+    });
+  } catch (error) {
+    console.error('Logout error:', error);
+  } finally {
+    clearSession();
+  }
+}
+
+function clearSession() {
+  sessionToken = null;
+  currentUserName = null;
+  sessionExpiresAt = null;
+  localStorage.removeItem('mepie_session_token');
+  localStorage.removeItem('mepie_current_user');
+  localStorage.removeItem('mepie_session_expires');
+}
+
+async function fetchFinancialData(type = 'all') {
+  try {
+    const result = await apiRequest(`finance-data?type=${type}`, {
+      method: 'GET'
+    });
+
+    return result;
+  } catch (error) {
+    throw new Error(`Failed to fetch ${type} data: ${error.message}`);
+  }
+}
+
+async function saveRecord(type, data, recordId = null) {
+  if (!sessionToken) {
+    throw new Error('Not authenticated');
+  }
+
+  const action = recordId ? 'update' : 'create';
+  const payload = {
+    sessionToken,
+    action,
+    type,
+    data,
+    ...(recordId && { id: recordId })
+  };
+
+  try {
+    const result = await apiRequest('finance-mutate', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+
+    return result;
+  } catch (error) {
+    throw new Error(`Failed to save record: ${error.message}`);
+  }
+}
+
+async function deleteRecord(type, recordId) {
+  if (!sessionToken) {
+    throw new Error('Not authenticated');
+  }
+
+  try {
+    const result = await apiRequest('finance-mutate', {
+      method: 'POST',
+      body: JSON.stringify({
+        sessionToken,
+        action: 'delete',
+        type,
+        id: recordId
+      })
+    });
+
+    return result;
+  } catch (error) {
+    throw new Error(`Failed to delete record: ${error.message}`);
+  }
+}
+
+// ==================================================
+// Data Transformation Functions
+// ==================================================
+
+function dbRecordToSheetRow(record, type) {
+  if (type === 'incoming') {
+    return [
+      record.date,
+      record.amount,
+      record.source,
+      record.donor_initials || '',
+      record.net_income,
+      record.purpose_note || '',
+      record.approved_by
+    ];
+  } else {
+    return [
+      record.date,
+      record.amount,
+      record.recipient,
+      record.purpose,
+      record.category,
+      record.approved_by
+    ];
+  }
+}
+
+function sheetRowToDbRecord(row, type) {
+  if (type === 'incoming') {
+    return {
+      date: row[0],
+      amount: parseFloat(String(row[1]).replace(/[£,\s]/g, '')) || 0,
+      source: row[2],
+      donor_initials: row[3] || null,
+      purpose_note: row[5] || null,
+      approved_by: row[6]
+    };
+  } else {
+    return {
+      date: row[0],
+      amount: parseFloat(String(row[1]).replace(/[£,\s]/g, '')) || 0,
+      recipient: row[2],
+      purpose: row[3],
+      category: row[4],
+      approved_by: row[5]
+    };
+  }
+}
 
 // Helper function to calculate net income
 function calculateNetIncome(amount, source) {
@@ -19,59 +305,58 @@ function calculateNetIncome(amount, source) {
   return numAmount.toFixed(2);
 }
 
-// Initial data - empty by default, data comes from localStorage
-const initialIncomingData = [];
+// ==================================================
+// Load Data from API
+// ==================================================
 
-const initialOutgoingData = [];
-
-// Load data from localStorage or use initial data
-function loadData(key, initialData) {
-  const stored = localStorage.getItem(key);
-  if (stored) {
-    try {
-      const data = JSON.parse(stored);
-      // Recalculate net income for all rows on load
-      if (key === STORAGE_KEY_INCOMING) {
-        data.forEach((row, index) => {
-          if (row.length >= 3) {
-            let amount = row[1];
-            const source = row[2];
-
-            // Clean amount - remove currency symbols and commas
-            if (amount) {
-              amount = String(amount).replace(/[£,\s]/g, '');
-            }
-
-            row[4] = calculateNetIncome(amount, source);
-          }
-        });
-      }
-      return data;
-    } catch (e) {
-      console.error('Error loading data:', e);
-      return initialData;
-    }
-  }
-  return initialData;
-}
-
-// Save data to localStorage
-function saveData(key, data) {
+async function loadIncomingData() {
   try {
-    localStorage.setItem(key, JSON.stringify(data));
-    return true;
-  } catch (e) {
-    console.error('Error saving data:', e);
-    return false;
+    showLoading('Loading incoming funds...');
+    const result = await fetchFinancialData('incoming');
+
+    if (result.success && result.data) {
+      const sheetData = result.data.map(record => dbRecordToSheetRow(record, 'incoming'));
+      return sheetData;
+    }
+
+    return [];
+  } catch (error) {
+    console.error('Error loading incoming data:', error);
+    updateStatusMessage(`Error: ${error.message}`, 'warning');
+    return [];
+  } finally {
+    hideLoading();
   }
 }
 
-// Initialize Incoming Funds Spreadsheet
-function initIncomingSheet() {
-  const data = loadData(STORAGE_KEY_INCOMING, initialIncomingData);
+async function loadOutgoingData() {
+  try {
+    showLoading('Loading outgoing funds...');
+    const result = await fetchFinancialData('outgoing');
+
+    if (result.success && result.data) {
+      const sheetData = result.data.map(record => dbRecordToSheetRow(record, 'outgoing'));
+      return sheetData;
+    }
+
+    return [];
+  } catch (error) {
+    console.error('Error loading outgoing data:', error);
+    updateStatusMessage(`Error: ${error.message}`, 'warning');
+    return [];
+  } finally {
+    hideLoading();
+  }
+}
+
+// ==================================================
+// Initialize Spreadsheets
+// ==================================================
+
+async function initIncomingSheet() {
+  const data = await loadIncomingData();
 
   console.log('Initializing incoming sheet with data:', data);
-  console.log('jspreadsheet available:', typeof jspreadsheet);
 
   incomingSheet = jspreadsheet(document.getElementById('incomingSpreadsheet'), {
     worksheets: [{
@@ -98,7 +383,7 @@ function initIncomingSheet() {
           title: 'Source',
           type: 'dropdown',
           width: 150,
-          source: ['GoFundMe', 'Stripe', 'Bank Transfer', 'Check', 'Cash', 'Other']
+          source: sources
         },
         {
           title: 'Donor Initials',
@@ -108,12 +393,13 @@ function initIncomingSheet() {
         {
           title: 'Net Income (£)',
           type: 'text',
-          width: 120
+          width: 130,
+          readOnly: false
         },
         {
           title: 'Purpose/Note',
           type: 'text',
-          width: 300
+          width: 200
         },
         {
           title: 'Approved By',
@@ -123,96 +409,62 @@ function initIncomingSheet() {
         }
       ],
       minDimensions: [7, 10],
-    }],
-    tableOverflow: true,
-    tableWidth: '100%',
-    editable: false,
-    onchange: function(instance, cell, x, y, value) {
-      console.log('Change detected:', {x, y, value, cell});
+      onchange: function(instance, cell, col, row, value) {
+        console.log('Cell changed:', { col, row, value });
 
-      if (isEditMode) {
-        updateStatusMessage('Changes detected. Click "Save Changes" to persist.', 'warning');
-      }
+        // Recalculate net income when amount or source changes
+        if (col === '1' || col === '2') {
+          const amount = instance.getValueFromCoords(1, row);
+          const source = instance.getValueFromCoords(2, row);
 
-      // Auto-calculate Net Income when Amount (column 1) or Source (column 2) changes
-      if (x == 1 || x == 2) {
-        console.log('Amount or Source changed, recalculating net income');
-        const rowIndex = y;
-        let amount = instance.getValueFromCoords(1, rowIndex);
-        const source = instance.getValueFromCoords(2, rowIndex);
+          let cleanAmount = amount;
+          if (cleanAmount) {
+            cleanAmount = String(cleanAmount).replace(/[£,\s]/g, '');
+          }
 
-        // Clean amount - remove currency symbols and commas
-        if (amount) {
-          amount = String(amount).replace(/[£,\s]/g, '');
+          const netIncome = calculateNetIncome(cleanAmount, source);
+          instance.setValueFromCoords(4, row, netIncome, true);
         }
 
-        console.log('Row data:', {amount, source, rowIndex});
-
-        // Calculate and set net income
-        const netIncome = calculateNetIncome(amount, source);
-        console.log('Calculated net income:', netIncome);
-
-        // Format with currency
-        const formatted = '£ ' + parseFloat(netIncome).toLocaleString('en-GB', {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2
-        });
-
-        console.log('Setting value at column 4, row', rowIndex, ':', formatted);
-        instance.setValueFromCoords(4, rowIndex, formatted);
-      }
-
-      // Update total whenever data changes
-      setTimeout(() => {
         updateTotalNetIncome();
-      }, 100);
-    }
+        updateBalance();
+      },
+      ondeleterow: function(instance, rowNumber, numOfRows) {
+        setTimeout(() => {
+          updateTotalNetIncome();
+          updateBalance();
+        }, 100);
+      },
+      oninsertrow: function(instance) {
+        setTimeout(() => {
+          updateTotalNetIncome();
+          updateBalance();
+        }, 100);
+      }
+    }],
+    editable: false
   });
 
-  console.log('Incoming sheet initialized:', incomingSheet);
-  console.log('Incoming sheet methods:', Object.keys(incomingSheet));
-  console.log('First worksheet:', incomingSheet[0]);
+  // Calculate net income for all existing rows
+  if (incomingSheet && incomingSheet[0]) {
+    const instance = incomingSheet[0];
+    const rowCount = instance.getConfig().data.length;
 
-  // Recalculate net income for all existing rows
-  setTimeout(() => {
-    console.log('Recalculating net income for all rows...');
-    const data = incomingSheet[0].getData();
-    console.log('Current data:', data);
+    for (let row = 0; row < rowCount; row++) {
+      const amount = instance.getValueFromCoords(1, row);
+      const source = instance.getValueFromCoords(2, row);
 
-    data.forEach((row, index) => {
-      console.log('Processing row', index, ':', row);
-      if (row[1] && row[2]) { // If amount and source exist
-        let amount = row[1];
-        const source = row[2];
-
-        // Clean amount - remove currency symbols and commas
-        if (amount) {
-          amount = String(amount).replace(/[£,\s]/g, '');
-        }
-
-        const netIncome = calculateNetIncome(amount, source);
-
-        // Format with currency
-        const formatted = '£ ' + parseFloat(netIncome).toLocaleString('en-GB', {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2
-        });
-
-        console.log('Setting net income for row', index, ':', formatted);
-        incomingSheet[0].setValueFromCoords(4, index, formatted);
+      if (amount && source) {
+        let cleanAmount = String(amount).replace(/[£,\s]/g, '');
+        const netIncome = calculateNetIncome(cleanAmount, source);
+        instance.setValueFromCoords(4, row, netIncome, true);
       }
-    });
-
-    setTimeout(() => {
-      console.log('After recalculation:', incomingSheet[0].getData());
-      updateTotalNetIncome();
-    }, 100);
-  }, 300);
+    }
+  }
 }
 
-// Initialize Outgoing Funds Spreadsheet
-function initOutgoingSheet() {
-  const data = loadData(STORAGE_KEY_OUTGOING, initialOutgoingData);
+async function initOutgoingSheet() {
+  const data = await loadOutgoingData();
 
   console.log('Initializing outgoing sheet with data:', data);
 
@@ -240,18 +492,18 @@ function initOutgoingSheet() {
         {
           title: 'Recipient',
           type: 'text',
-          width: 200
+          width: 150
         },
         {
           title: 'Purpose',
           type: 'text',
-          width: 250
+          width: 200
         },
         {
           title: 'Category',
           type: 'dropdown',
           width: 150,
-          source: ['Education', 'Operations', 'Marketing', 'Infrastructure', 'Salaries', 'Other']
+          source: categories
         },
         {
           title: 'Approved By',
@@ -261,140 +513,186 @@ function initOutgoingSheet() {
         }
       ],
       minDimensions: [6, 10],
-    }],
-    tableOverflow: true,
-    tableWidth: '100%',
-    editable: false,
-    onchange: function(instance, cell, x, y, value) {
-      if (isEditMode) {
-        updateStatusMessage('Changes detected. Click "Save Changes" to persist.', 'warning');
-      }
-
-      // Update totals when amount changes in outgoing sheet
-      if (x == 1) {
+      onchange: function(instance, cell, col, row, value) {
+        console.log('Cell changed:', { col, row, value });
+        updateTotalOutgoing();
+        updateBalance();
+      },
+      ondeleterow: function(instance, rowNumber, numOfRows) {
         setTimeout(() => {
           updateTotalOutgoing();
+          updateBalance();
+        }, 100);
+      },
+      oninsertrow: function(instance) {
+        setTimeout(() => {
+          updateTotalOutgoing();
+          updateBalance();
         }, 100);
       }
-    }
+    }],
+    editable: false
   });
-
-  console.log('Outgoing sheet initialized:', outgoingSheet);
-  console.log('Outgoing sheet methods:', Object.keys(outgoingSheet));
-  console.log('First worksheet:', outgoingSheet[0]);
-
-  // Calculate initial total outgoing
-  setTimeout(() => {
-    updateTotalOutgoing();
-  }, 300);
 }
 
-// Update status message
-function updateStatusMessage(message, type = 'info') {
-  const statusEl = document.getElementById('statusMessage');
-  statusEl.textContent = message;
-  statusEl.className = `status-message ${type}`;
-}
+// ==================================================
+// Calculate Totals
+// ==================================================
 
-// Calculate and update total net income
 function updateTotalNetIncome() {
   if (!incomingSheet || !incomingSheet[0]) return;
 
   const data = incomingSheet[0].getData();
   let total = 0;
 
-  // Sum up all net income values (column index 4)
-  for (let i = 0; i < data.length; i++) {
-    const netIncome = data[i][4]; // Net Income column
-    if (netIncome) {
-      // Remove currency symbol and commas, then parse
-      const cleanValue = String(netIncome).replace(/[£,]/g, '').trim();
-      const numValue = parseFloat(cleanValue);
-      if (!isNaN(numValue)) {
-        total += numValue;
-      }
+  data.forEach(row => {
+    if (row[4]) {
+      let netIncome = String(row[4]).replace(/[£,\s]/g, '');
+      total += parseFloat(netIncome) || 0;
     }
-  }
+  });
 
-  // Format and display total
-  const totalElement = document.getElementById('totalNetIncome');
-  if (totalElement) {
-    totalElement.textContent = '£ ' + total.toLocaleString('en-GB', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
+  const totalEl = document.getElementById('totalNetIncome');
+  if (totalEl) {
+    totalEl.textContent = `£ ${total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
   }
-
-  // Update balance after updating income
-  updateBalance();
 }
 
-// Calculate and update total outgoing
 function updateTotalOutgoing() {
   if (!outgoingSheet || !outgoingSheet[0]) return;
 
   const data = outgoingSheet[0].getData();
   let total = 0;
 
-  // Sum up all amount values (column index 1)
-  for (let i = 0; i < data.length; i++) {
-    const amount = data[i][1]; // Amount column
-    if (amount) {
-      // Remove currency symbol and commas, then parse
-      const cleanValue = String(amount).replace(/[£,]/g, '').trim();
-      const numValue = parseFloat(cleanValue);
-      if (!isNaN(numValue)) {
-        total += numValue;
-      }
+  data.forEach(row => {
+    if (row[1]) {
+      let amount = String(row[1]).replace(/[£,\s]/g, '');
+      total += parseFloat(amount) || 0;
     }
-  }
-
-  // Format and display total
-  const totalElement = document.getElementById('totalOutgoing');
-  if (totalElement) {
-    totalElement.textContent = '£ ' + total.toLocaleString('en-GB', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-  }
-
-  // Update balance after updating outgoing
-  updateBalance();
-}
-
-// Calculate and update balance
-function updateBalance() {
-  const totalIncomeElement = document.getElementById('totalNetIncome');
-  const totalOutgoingElement = document.getElementById('totalOutgoing');
-  const balanceElement = document.getElementById('currentBalance');
-
-  if (!totalIncomeElement || !totalOutgoingElement || !balanceElement) return;
-
-  // Parse totals
-  const incomeText = totalIncomeElement.textContent;
-  const outgoingText = totalOutgoingElement.textContent;
-
-  const income = parseFloat(incomeText.replace(/[£,]/g, '').trim()) || 0;
-  const outgoing = parseFloat(outgoingText.replace(/[£,]/g, '').trim()) || 0;
-
-  const balance = income - outgoing;
-
-  // Format and display balance
-  balanceElement.textContent = '£ ' + balance.toLocaleString('en-GB', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
   });
 
-  // Change color based on balance (green if positive, red if negative)
-  if (balance >= 0) {
-    balanceElement.style.color = '#1b5e20';
-  } else {
-    balanceElement.style.color = '#b71c1c';
+  const totalEl = document.getElementById('totalOutgoing');
+  if (totalEl) {
+    totalEl.textContent = `£ ${total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
   }
 }
 
-// Enable/disable editing
-function setEditMode(enabled) {
+function updateBalance() {
+  const netIncomeEl = document.getElementById('totalNetIncome');
+  const outgoingEl = document.getElementById('totalOutgoing');
+  const balanceEl = document.getElementById('currentBalance');
+
+  if (!netIncomeEl || !outgoingEl || !balanceEl) return;
+
+  const netIncomeText = netIncomeEl.textContent.replace(/[£,\s]/g, '');
+  const outgoingText = outgoingEl.textContent.replace(/[£,\s]/g, '');
+
+  const netIncome = parseFloat(netIncomeText) || 0;
+  const outgoing = parseFloat(outgoingText) || 0;
+  const balance = netIncome - outgoing;
+
+  balanceEl.textContent = `£ ${balance.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+
+  // Color code balance
+  if (balance > 0) {
+    balanceEl.style.color = '#1b5e20';
+  } else if (balance < 0) {
+    balanceEl.style.color = '#b71c1c';
+  } else {
+    balanceEl.style.color = '#0d47a1';
+  }
+}
+
+// ==================================================
+// Authentication UI
+// ==================================================
+
+function setupPasswordModal() {
+  const modal = document.getElementById('passwordModal');
+  const userSelect = document.getElementById('userSelect');
+  const passwordInput = document.getElementById('passwordInput');
+  const submitBtn = document.getElementById('submitPasswordBtn');
+  const cancelBtn = document.getElementById('cancelBtn');
+
+  submitBtn.addEventListener('click', async () => {
+    const userName = userSelect.value;
+    const password = passwordInput.value;
+
+    if (!userName) {
+      updateStatusMessage('Please select your name', 'warning');
+      return;
+    }
+
+    if (!password) {
+      updateStatusMessage('Please enter password', 'warning');
+      return;
+    }
+
+    showLoading('Authenticating...');
+
+    const result = await authenticateUser(userName, password);
+
+    hideLoading();
+
+    if (result.success) {
+      modal.classList.remove('active');
+      passwordInput.value = '';
+      userSelect.value = '';
+      toggleEditMode(true);
+      updateCurrentUserBanner();
+    } else {
+      updateStatusMessage(`Authentication failed: ${result.error}`, 'warning');
+    }
+  });
+
+  cancelBtn.addEventListener('click', () => {
+    modal.classList.remove('active');
+    passwordInput.value = '';
+    userSelect.value = '';
+  });
+
+  // Enter key support
+  passwordInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      submitBtn.click();
+    }
+  });
+}
+
+function setupEditButton() {
+  const editBtn = document.getElementById('editBtn');
+
+  editBtn.addEventListener('click', async () => {
+    if (isEditMode) {
+      // Disable editing
+      await logoutUser();
+      toggleEditMode(false);
+      updateCurrentUserBanner();
+    } else {
+      // Show login modal
+      const modal = document.getElementById('passwordModal');
+      modal.classList.add('active');
+    }
+  });
+}
+
+function setupLogoutButton() {
+  const logoutBtn = document.getElementById('logoutBtn');
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      await logoutUser();
+      toggleEditMode(false);
+      updateCurrentUserBanner();
+      updateStatusMessage('Logged out successfully', 'success');
+      setTimeout(() => {
+        updateStatusMessage('View-only mode. Click "Enable Editing" to make changes (password required).', 'info');
+      }, 2000);
+    });
+  }
+}
+
+function toggleEditMode(enabled) {
   isEditMode = enabled;
 
   if (incomingSheet && incomingSheet[0] && incomingSheet[0].options) {
@@ -417,7 +715,70 @@ function setEditMode(enabled) {
   }
 }
 
-// Handle tab switching
+// ==================================================
+// Save Button
+// ==================================================
+
+function setupSaveButton() {
+  const saveBtn = document.getElementById('saveBtn');
+
+  saveBtn.addEventListener('click', async () => {
+    if (!sessionToken) {
+      updateStatusMessage('Not authenticated', 'warning');
+      return;
+    }
+
+    showLoading('Saving changes...');
+
+    try {
+      // For now, save all data (in future, only save dirty rows)
+      const incomingData = incomingSheet[0].getData();
+      const outgoingData = outgoingSheet[0].getData();
+
+      // Note: This is a simplified save - in production you'd track individual row changes
+      // and only save modified/new rows using the batch API
+
+      updateStatusMessage('Save functionality coming soon - full batch save will be implemented', 'info');
+
+      hideLoading();
+    } catch (error) {
+      hideLoading();
+      updateStatusMessage(`Save failed: ${error.message}`, 'warning');
+    }
+  });
+}
+
+// ==================================================
+// Add Row Button
+// ==================================================
+
+function setupAddRowButton() {
+  const addRowBtn = document.getElementById('addRowBtn');
+
+  addRowBtn.addEventListener('click', () => {
+    if (!isEditMode) return;
+
+    const today = new Date();
+    const formattedDate = `${String(today.getDate()).padStart(2, '0')}-${String(today.getMonth() + 1).padStart(2, '0')}-${today.getFullYear()}`;
+
+    if (currentTab === 'incoming') {
+      if (incomingSheet && incomingSheet[0]) {
+        incomingSheet[0].insertRow(1, 0, false);
+        incomingSheet[0].setValueFromCoords(0, 0, formattedDate);
+      }
+    } else {
+      if (outgoingSheet && outgoingSheet[0]) {
+        outgoingSheet[0].insertRow(1, 0, false);
+        outgoingSheet[0].setValueFromCoords(0, 0, formattedDate);
+      }
+    }
+  });
+}
+
+// ==================================================
+// Tab Switching
+// ==================================================
+
 function setupTabs() {
   const tabButtons = document.querySelectorAll('.tab-button');
   const tabContents = document.querySelectorAll('.tab-content');
@@ -437,130 +798,10 @@ function setupTabs() {
   });
 }
 
-// Handle password modal
-function setupPasswordModal() {
-  const modal = document.getElementById('passwordModal');
-  const passwordInput = document.getElementById('passwordInput');
-  const submitBtn = document.getElementById('submitPasswordBtn');
-  const cancelBtn = document.getElementById('cancelBtn');
+// ==================================================
+// Export CSV
+// ==================================================
 
-  submitBtn.addEventListener('click', () => {
-    const enteredPassword = passwordInput.value;
-
-    if (enteredPassword === EDIT_PASSWORD) {
-      modal.classList.remove('active');
-      passwordInput.value = '';
-      setEditMode(true);
-    } else {
-      updateStatusMessage('Incorrect password. Please try again.', 'warning');
-      passwordInput.value = '';
-      passwordInput.focus();
-    }
-  });
-
-  cancelBtn.addEventListener('click', () => {
-    modal.classList.remove('active');
-    passwordInput.value = '';
-  });
-
-  passwordInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      submitBtn.click();
-    }
-  });
-}
-
-// Handle edit button
-function setupEditButton() {
-  const editBtn = document.getElementById('editBtn');
-
-  editBtn.addEventListener('click', () => {
-    if (isEditMode) {
-      setEditMode(false);
-    } else {
-      document.getElementById('passwordModal').classList.add('active');
-      document.getElementById('passwordInput').focus();
-    }
-  });
-}
-
-// Handle save button
-function setupSaveButton() {
-  const saveBtn = document.getElementById('saveBtn');
-
-  saveBtn.addEventListener('click', () => {
-    const incomingData = incomingSheet[0].getData();
-    const outgoingData = outgoingSheet[0].getData();
-
-    const savedIncoming = saveData(STORAGE_KEY_INCOMING, incomingData);
-    const savedOutgoing = saveData(STORAGE_KEY_OUTGOING, outgoingData);
-
-    if (savedIncoming && savedOutgoing) {
-      updateStatusMessage('Changes saved successfully!', 'success');
-      updateTotalNetIncome(); // Update totals after save
-      updateTotalOutgoing();
-      setTimeout(() => {
-        if (isEditMode) {
-          updateStatusMessage('Edit mode enabled. Make your changes and click "Save Changes".', 'success');
-        }
-      }, 2000);
-    } else {
-      updateStatusMessage('Error saving changes. Please try again.', 'warning');
-    }
-  });
-}
-
-// Handle add row button
-function setupAddRowButton() {
-  const addRowBtn = document.getElementById('addRowBtn');
-
-  addRowBtn.addEventListener('click', () => {
-    console.log('Add row button clicked');
-    console.log('Current tab:', currentTab);
-    console.log('incomingSheet:', incomingSheet);
-    console.log('incomingSheet[0]:', incomingSheet[0]);
-    console.log('outgoingSheet:', outgoingSheet);
-    console.log('outgoingSheet[0]:', outgoingSheet[0]);
-
-    // Format today's date as DD-MM-YYYY
-    const today = new Date();
-    const day = String(today.getDate()).padStart(2, '0');
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const year = today.getFullYear();
-    const formattedDate = `${day}-${month}-${year}`;
-
-    try {
-      if (currentTab === 'incoming') {
-        console.log('Adding row to incoming sheet');
-        // Insert 1 row at the end
-        incomingSheet[0].insertRow(1, null, true);
-        // Get the last row index
-        const lastRowIndex = incomingSheet[0].getData().length - 1;
-        console.log('Last row index:', lastRowIndex);
-        // Set the date in the first column of the new row
-        incomingSheet[0].setValueFromCoords(0, lastRowIndex, formattedDate);
-        // Set initial net income to 0
-        incomingSheet[0].setValueFromCoords(4, lastRowIndex, '0.00', true);
-        updateStatusMessage('New row added to Incoming Funds. Don\'t forget to save!', 'warning');
-      } else {
-        console.log('Adding row to outgoing sheet');
-        // Insert 1 row at the end
-        outgoingSheet[0].insertRow(1, null, true);
-        // Get the last row index
-        const lastRowIndex = outgoingSheet[0].getData().length - 1;
-        console.log('Last row index:', lastRowIndex);
-        // Set the date in the first column of the new row
-        outgoingSheet[0].setValueFromCoords(0, lastRowIndex, formattedDate);
-        updateStatusMessage('New row added to Outgoing Funds. Don\'t forget to save!', 'warning');
-      }
-    } catch (error) {
-      console.error('Error adding row:', error);
-      updateStatusMessage('Error adding row: ' + error.message, 'warning');
-    }
-  });
-}
-
-// Handle export button
 function setupExportButton() {
   const exportBtn = document.getElementById('exportBtn');
 
@@ -595,7 +836,102 @@ function setupExportButton() {
   });
 }
 
-// Handle import from CSV button
+// ==================================================
+// Export PDF
+// ==================================================
+
+function setupExportPdfButton() {
+  const exportPdfBtn = document.getElementById('exportPdfBtn');
+
+  exportPdfBtn.addEventListener('click', () => {
+    const printWindow = window.open('', '_blank');
+
+    const incomingData = incomingSheet[0].getData();
+    const outgoingData = outgoingSheet[0].getData();
+
+    let html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>MEPIE Foundation - Financial Transparency Report</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; }
+          h1 { color: #2c3e50; }
+          h2 { color: #34495e; margin-top: 30px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+          th { background-color: #f2f2f2; }
+          .summary { margin: 20px 0; padding: 15px; background: #f9f9f9; border-left: 4px solid #2c3e50; }
+          @media print {
+            button { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <h1>MEPIE Foundation - Financial Transparency Report</h1>
+        <p>Generated: ${new Date().toLocaleDateString('en-GB')}</p>
+
+        <div class="summary">
+          <strong>Total Net Income:</strong> ${document.getElementById('totalNetIncome').textContent}<br>
+          <strong>Total Outgoing:</strong> ${document.getElementById('totalOutgoing').textContent}<br>
+          <strong>Current Balance:</strong> ${document.getElementById('currentBalance').textContent}
+        </div>
+
+        <h2>Incoming Funds</h2>
+        <table>
+          <tr>
+            <th>Date</th>
+            <th>Amount (£)</th>
+            <th>Source</th>
+            <th>Donor Initials</th>
+            <th>Net Income (£)</th>
+            <th>Purpose/Note</th>
+            <th>Approved By</th>
+          </tr>
+          ${incomingData.map(row => `
+            <tr>
+              ${row.map(cell => `<td>${cell || ''}</td>`).join('')}
+            </tr>
+          `).join('')}
+        </table>
+
+        <h2>Outgoing Funds</h2>
+        <table>
+          <tr>
+            <th>Date</th>
+            <th>Amount (£)</th>
+            <th>Recipient</th>
+            <th>Purpose</th>
+            <th>Category</th>
+            <th>Approved By</th>
+          </tr>
+          ${outgoingData.map(row => `
+            <tr>
+              ${row.map(cell => `<td>${cell || ''}</td>`).join('')}
+            </tr>
+          `).join('')}
+        </table>
+
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 500);
+          }
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+  });
+}
+
+// ==================================================
+// Import CSV (Placeholder - will be enhanced with API)
+// ==================================================
+
 function setupImportButton() {
   const importBtn = document.getElementById('importBtn');
   const fileInput = document.getElementById('csvFileInput');
@@ -613,14 +949,13 @@ function setupImportButton() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         const csv = event.target.result;
         const lines = csv.split('\n').filter(line => line.trim());
 
         // Skip header row and parse data
         const data = lines.slice(1).map(line => {
-          // Handle CSV with quoted fields
           const matches = line.match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g);
           return matches ? matches.map(field => field.replace(/^"|"$/g, '').trim()) : [];
         }).filter(row => row.length > 0);
@@ -630,44 +965,32 @@ function setupImportButton() {
           return;
         }
 
-        // Determine which sheet to import to and validate column count
-        let sheet, storageKey, expectedColumns;
+        // Load into spreadsheet
+        let sheet;
         if (currentTab === 'incoming') {
           sheet = incomingSheet[0];
-          storageKey = STORAGE_KEY_INCOMING;
-          expectedColumns = 7;
+        } else {
+          sheet = outgoingSheet[0];
+        }
 
-          // Recalculate net income for imported data
-          data.forEach(row => {
+        sheet.setData(data);
+
+        // Recalculate if incoming
+        if (currentTab === 'incoming') {
+          data.forEach((row, rowIndex) => {
             if (row.length >= 3) {
               let amount = row[1];
               const source = row[2];
 
-              // Clean amount
               if (amount) {
                 amount = String(amount).replace(/[£,\s]/g, '');
               }
 
-              row[4] = calculateNetIncome(amount, source);
+              const netIncome = calculateNetIncome(amount, source);
+              sheet.setValueFromCoords(4, rowIndex, netIncome, true);
             }
           });
-        } else {
-          sheet = outgoingSheet[0];
-          storageKey = STORAGE_KEY_OUTGOING;
-          expectedColumns = 6;
         }
-
-        // Validate column count
-        const invalidRows = data.filter(row => row.length !== expectedColumns);
-        if (invalidRows.length > 0) {
-          updateStatusMessage(`Warning: ${invalidRows.length} rows have incorrect column count and may not import correctly.`, 'warning');
-        }
-
-        // Clear existing data and load new data
-        sheet.setData(data);
-
-        // Save to localStorage
-        saveData(storageKey, data);
 
         // Update totals
         if (currentTab === 'incoming') {
@@ -677,7 +1000,7 @@ function setupImportButton() {
         }
         updateBalance();
 
-        updateStatusMessage(`Successfully imported ${data.length} rows from CSV.`, 'success');
+        updateStatusMessage(`Successfully imported ${data.length} rows from CSV. Remember to save changes!`, 'success');
 
         // Reset file input
         fileInput.value = '';
@@ -692,208 +1015,60 @@ function setupImportButton() {
   });
 }
 
-// Handle export to PDF button
-function setupExportPdfButton() {
-  const exportPdfBtn = document.getElementById('exportPdfBtn');
+// ==================================================
+// Check Session on Page Load
+// ==================================================
 
-  exportPdfBtn.addEventListener('click', () => {
-    // Create a printable HTML content
-    const printWindow = window.open('', '_blank');
-    const doc = printWindow.document;
-
-    doc.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>MEPIE Foundation - Financial Transparency Report</title>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            max-width: 1200px;
-            margin: 0 auto;
-          }
-          h1 {
-            color: #2c3e50;
-            border-bottom: 3px solid #2c3e50;
-            padding-bottom: 10px;
-          }
-          .summary {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            margin: 20px 0;
-          }
-          .summary-box {
-            padding: 15px;
-            border-radius: 8px;
-            border: 2px solid;
-          }
-          .summary-box h3 {
-            margin: 0 0 10px 0;
-            font-size: 1rem;
-          }
-          .summary-box .amount {
-            font-size: 1.5rem;
-            font-weight: bold;
-          }
-          .income { border-color: #2e7d32; background: #e8f5e9; }
-          .outgoing { border-color: #c62828; background: #ffebee; }
-          .balance { border-color: #1565c0; background: #e3f2fd; }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-          }
-          th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-          }
-          th {
-            background-color: #2c3e50;
-            color: white;
-          }
-          tr:nth-child(even) {
-            background-color: #f9f9f9;
-          }
-          .section-title {
-            margin-top: 30px;
-            color: #2c3e50;
-            font-size: 1.3rem;
-          }
-          @media print {
-            .no-print { display: none; }
-          }
-        </style>
-      </head>
-      <body>
-        <h1>MEPIE Foundation - Financial Transparency Report</h1>
-        <p>Generated on: ${new Date().toLocaleDateString('en-GB', {
-          day: '2-digit',
-          month: 'long',
-          year: 'numeric'
-        })}</p>
-
-        <div class="summary">
-          <div class="summary-box income">
-            <h3>Total Net Income</h3>
-            <div class="amount">${document.getElementById('totalNetIncome').textContent}</div>
-            <small>After GoFundMe fees (3.31%)</small>
-          </div>
-          <div class="summary-box outgoing">
-            <h3>Total Outgoing</h3>
-            <div class="amount">${document.getElementById('totalOutgoing').textContent}</div>
-            <small>All expenses and disbursements</small>
-          </div>
-          <div class="summary-box balance">
-            <h3>Current Balance</h3>
-            <div class="amount">${document.getElementById('currentBalance').textContent}</div>
-            <small>Net Income - Total Outgoing</small>
-          </div>
-        </div>
-
-        <h2 class="section-title">Incoming Funds</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Amount</th>
-              <th>Source</th>
-              <th>Donor Initials</th>
-              <th>Net Income</th>
-              <th>Purpose/Note</th>
-              <th>Approved By</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${generateTableRows(incomingSheet[0].getData())}
-          </tbody>
-        </table>
-
-        <h2 class="section-title">Outgoing Funds</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Amount</th>
-              <th>Recipient</th>
-              <th>Purpose</th>
-              <th>Category</th>
-              <th>Approved By</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${generateTableRows(outgoingSheet[0].getData())}
-          </tbody>
-        </table>
-
-        <div class="no-print" style="margin-top: 30px; text-align: center;">
-          <button onclick="window.print()" style="padding: 10px 20px; font-size: 1rem; cursor: pointer;">Print / Save as PDF</button>
-          <button onclick="window.close()" style="padding: 10px 20px; font-size: 1rem; cursor: pointer; margin-left: 10px;">Close</button>
-        </div>
-      </body>
-      </html>
-    `);
-
-    doc.close();
-
-    // Auto-trigger print dialog after a brief delay
-    setTimeout(() => {
-      printWindow.print();
-    }, 500);
-
-    updateStatusMessage('PDF export opened in new window', 'success');
-    setTimeout(() => {
-      if (isEditMode) {
-        updateStatusMessage('Edit mode enabled. Make your changes and click "Save Changes".', 'success');
-      } else {
-        updateStatusMessage('View-only mode. Click "Enable Editing" to make changes (password required).', 'info');
-      }
-    }, 2000);
-  });
-}
-
-// Helper function to generate table rows for PDF
-function generateTableRows(data) {
-  return data.map(row => {
-    if (row.some(cell => cell)) { // Only include rows with data
-      return '<tr>' + row.map(cell => `<td>${cell || ''}</td>`).join('') + '</tr>';
+async function checkSessionOnLoad() {
+  if (sessionToken) {
+    const result = await validateSession();
+    if (result.valid) {
+      toggleEditMode(true);
+      updateCurrentUserBanner();
+    } else {
+      clearSession();
     }
-    return '';
-  }).join('');
+  }
 }
 
-// Initialize everything when DOM is ready
-function init() {
-  console.log('Starting initialization...');
-  console.log('jspreadsheet:', typeof jspreadsheet);
-  console.log('jSuites:', typeof jSuites);
+// ==================================================
+// Initialize Everything
+// ==================================================
 
-  initIncomingSheet();
-  initOutgoingSheet();
+async function initializeApp() {
+  console.log('Initializing financial transparency app...');
+
+  // Check if user has an existing session
+  await checkSessionOnLoad();
+
+  // Initialize spreadsheets
+  await initIncomingSheet();
+  await initOutgoingSheet();
+
+  // Setup UI handlers
   setupTabs();
   setupPasswordModal();
   setupEditButton();
+  setupLogoutButton();
   setupSaveButton();
   setupAddRowButton();
   setupExportButton();
   setupImportButton();
   setupExportPdfButton();
 
-  updateStatusMessage('View-only mode. Click "Enable Editing" to make changes (password required).', 'info');
-
-  // Calculate initial total net income
+  // Initial totals calculation
   setTimeout(() => {
     updateTotalNetIncome();
-  }, 100);
+    updateTotalOutgoing();
+    updateBalance();
+  }, 500);
 
-  console.log('Initialization complete');
+  console.log('App initialized successfully');
 }
 
-// Wait for DOM to be ready
+// Start the app when DOM is ready
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
+  document.addEventListener('DOMContentLoaded', initializeApp);
 } else {
-  init();
+  initializeApp();
 }
