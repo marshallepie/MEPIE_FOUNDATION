@@ -22,7 +22,7 @@ export default defineConfig({
     devSourcemap: true,
   },
   server: {
-    port: 3000,
-    open: true,
+    // Use default port 5173 for Netlify Dev compatibility
+    open: false, // Don't auto-open, Netlify Dev will handle this
   },
 });
