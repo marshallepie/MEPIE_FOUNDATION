@@ -433,45 +433,6 @@ async function initIncomingSheet() {
         }
       ],
       minDimensions: [7, 10],
-      contextMenu: function(obj, x, y, e, items) {
-        // Override the delete row functionality
-        const deleteIndex = items.findIndex(item => item && item.title === 'Delete selected rows');
-        if (deleteIndex !== -1) {
-          const originalOnclick = items[deleteIndex].onclick;
-          items[deleteIndex].onclick = function() {
-            const selectedRows = obj.getSelectedRows(true); // Get selected row indices
-            console.log('Custom delete triggered for incoming rows:', selectedRows);
-
-            // Delete from database first
-            selectedRows.forEach(rowIndex => {
-              if (recordIds.incoming.has(rowIndex)) {
-                const recordId = recordIds.incoming.get(rowIndex);
-                console.log('Deleting incoming record:', recordId, 'at row:', rowIndex);
-
-                deleteRecord('incoming', recordId)
-                  .then(() => {
-                    console.log('Successfully deleted incoming record:', recordId);
-                    updateStatusMessage('Record deleted', 'success');
-                  })
-                  .catch(error => {
-                    console.error('Failed to delete incoming record:', error);
-                    updateStatusMessage(`Failed to delete record: ${error.message}`, 'error');
-                  });
-              }
-            });
-
-            // Then call the original delete to remove from UI
-            if (originalOnclick) originalOnclick();
-
-            // Update totals
-            setTimeout(() => {
-              updateTotalNetIncome();
-              updateBalance();
-            }, 100);
-          };
-        }
-        return items;
-      },
       onchange: function(instance, cell, col, row, value) {
         console.log('Cell changed:', { col, row, value });
 
@@ -521,6 +482,9 @@ async function initIncomingSheet() {
       }
     }
   }
+
+  // Add delete buttons after a short delay to ensure DOM is ready
+  setTimeout(() => addDeleteButtons('incoming'), 100);
 }
 
 async function initOutgoingSheet() {
@@ -573,45 +537,6 @@ async function initOutgoingSheet() {
         }
       ],
       minDimensions: [6, 10],
-      contextMenu: function(obj, x, y, e, items) {
-        // Override the delete row functionality
-        const deleteIndex = items.findIndex(item => item && item.title === 'Delete selected rows');
-        if (deleteIndex !== -1) {
-          const originalOnclick = items[deleteIndex].onclick;
-          items[deleteIndex].onclick = function() {
-            const selectedRows = obj.getSelectedRows(true); // Get selected row indices
-            console.log('Custom delete triggered for outgoing rows:', selectedRows);
-
-            // Delete from database first
-            selectedRows.forEach(rowIndex => {
-              if (recordIds.outgoing.has(rowIndex)) {
-                const recordId = recordIds.outgoing.get(rowIndex);
-                console.log('Deleting outgoing record:', recordId, 'at row:', rowIndex);
-
-                deleteRecord('outgoing', recordId)
-                  .then(() => {
-                    console.log('Successfully deleted outgoing record:', recordId);
-                    updateStatusMessage('Record deleted', 'success');
-                  })
-                  .catch(error => {
-                    console.error('Failed to delete outgoing record:', error);
-                    updateStatusMessage(`Failed to delete record: ${error.message}`, 'error');
-                  });
-              }
-            });
-
-            // Then call the original delete to remove from UI
-            if (originalOnclick) originalOnclick();
-
-            // Update totals
-            setTimeout(() => {
-              updateTotalOutgoing();
-              updateBalance();
-            }, 100);
-          };
-        }
-        return items;
-      },
       onchange: function(instance, cell, col, row, value) {
         console.log('Cell changed:', { col, row, value });
         updateTotalOutgoing();
@@ -625,6 +550,139 @@ async function initOutgoingSheet() {
       }
     }],
     editable: false
+  });
+
+  // Add delete buttons after a short delay to ensure DOM is ready
+  setTimeout(() => addDeleteButtons('outgoing'), 100);
+}
+
+// ==================================================
+// Delete Buttons
+// ==================================================
+
+function addDeleteButtons(type) {
+  const sheetId = type === 'incoming' ? 'incomingSpreadsheet' : 'outgoingSpreadsheet';
+  const sheet = type === 'incoming' ? incomingSheet : outgoingSheet;
+
+  if (!sheet || !sheet[0]) {
+    console.error('Sheet not found for type:', type);
+    return;
+  }
+
+  const container = document.getElementById(sheetId);
+  const tbody = container.querySelector('tbody');
+
+  if (!tbody) {
+    console.error('tbody not found for sheet:', type);
+    return;
+  }
+
+  const rows = tbody.querySelectorAll('tr');
+  console.log(`Adding delete buttons to ${rows.length} ${type} rows`);
+
+  rows.forEach((tr, rowIndex) => {
+    // Check if delete button already exists
+    if (tr.querySelector('.delete-row-btn')) return;
+
+    // Create delete button
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'delete-row-btn';
+    deleteBtn.innerHTML = '🗑️';
+    deleteBtn.title = 'Delete this row';
+    deleteBtn.style.cssText = `
+      position: absolute;
+      left: -40px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 30px;
+      height: 30px;
+      border: 1px solid #dc3545;
+      background: #fff;
+      color: #dc3545;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.7;
+      transition: all 0.2s;
+    `;
+
+    deleteBtn.addEventListener('mouseenter', () => {
+      deleteBtn.style.opacity = '1';
+      deleteBtn.style.background = '#dc3545';
+      deleteBtn.style.color = '#fff';
+    });
+
+    deleteBtn.addEventListener('mouseleave', () => {
+      deleteBtn.style.opacity = '0.7';
+      deleteBtn.style.background = '#fff';
+      deleteBtn.style.color = '#dc3545';
+    });
+
+    deleteBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+
+      if (!isEditMode) {
+        updateStatusMessage('Please enable editing first', 'warning');
+        return;
+      }
+
+      if (!sessionToken) {
+        updateStatusMessage('Not authenticated', 'warning');
+        return;
+      }
+
+      const recordIdMap = type === 'incoming' ? recordIds.incoming : recordIds.outgoing;
+
+      if (recordIdMap.has(rowIndex)) {
+        const recordId = recordIdMap.get(rowIndex);
+        console.log(`Deleting ${type} record:`, recordId, 'at row:', rowIndex);
+
+        if (confirm(`Are you sure you want to delete this ${type} record?`)) {
+          try {
+            showLoading('Deleting record...');
+            await deleteRecord(type, recordId);
+            console.log('Successfully deleted record:', recordId);
+
+            // Remove from UI
+            sheet[0].deleteRow(rowIndex);
+
+            // Update totals
+            if (type === 'incoming') {
+              updateTotalNetIncome();
+            } else {
+              updateTotalOutgoing();
+            }
+            updateBalance();
+
+            hideLoading();
+            updateStatusMessage('Record deleted successfully', 'success');
+
+            // Reload data to refresh
+            setTimeout(async () => {
+              if (type === 'incoming') {
+                await initIncomingSheet();
+              } else {
+                await initOutgoingSheet();
+              }
+            }, 1000);
+          } catch (error) {
+            hideLoading();
+            console.error('Failed to delete record:', error);
+            updateStatusMessage(`Failed to delete: ${error.message}`, 'error');
+          }
+        }
+      } else {
+        // New row not yet saved
+        updateStatusMessage('This row is not saved yet, just delete it normally', 'info');
+      }
+    });
+
+    // Make tr position relative to contain absolute button
+    tr.style.position = 'relative';
+    tr.appendChild(deleteBtn);
   });
 }
 
