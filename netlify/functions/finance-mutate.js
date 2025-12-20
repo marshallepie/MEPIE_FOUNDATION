@@ -287,22 +287,45 @@ async function handleDelete(body, userName) {
   try {
     const tableName = type === 'incoming' ? 'incoming_funds' : 'outgoing_funds';
 
-    const { error } = await supabase
+    console.log('Attempting to soft delete:', { tableName, id, userName });
+
+    const { data, error } = await supabase
       .from(tableName)
       .update({
         is_deleted: true,
         deleted_at: new Date().toISOString(),
         deleted_by: userName
       })
-      .eq('id', id);
+      .eq('id', id)
+      .select();
 
-    if (error) throw error;
+    console.log('Delete result:', { data, error });
+
+    if (error) {
+      console.error('Supabase delete error:', error);
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      console.warn('No record found to delete with id:', id);
+      return {
+        statusCode: 404,
+        headers,
+        body: JSON.stringify({
+          success: false,
+          error: 'Record not found'
+        })
+      };
+    }
+
+    console.log('Successfully soft deleted record:', data[0]);
 
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
-        success: true
+        success: true,
+        record: data[0]
       })
     };
   } catch (error) {
