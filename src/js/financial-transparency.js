@@ -23,6 +23,12 @@ const dirtyRows = {
   outgoing: new Set()
 };
 
+// Track deleted rows (that exist in database)
+const deletedRecordIds = {
+  incoming: new Set(),
+  outgoing: new Set()
+};
+
 // Valid options
 const approvers = ['Marshall Epie', 'Aruna Ramineni', 'Fitz Shrowder'];
 const sources = ['GoFundMe', 'Stripe', 'Bank Transfer', 'Check', 'Cash', 'Other'];
@@ -323,8 +329,9 @@ async function loadIncomingData() {
     showLoading('Loading incoming funds...');
     const result = await fetchFinancialData('incoming');
 
-    // Clear existing record IDs
+    // Clear existing record IDs and deleted IDs
     recordIds.incoming.clear();
+    deletedRecordIds.incoming.clear();
 
     if (result.success && result.data) {
       const sheetData = result.data.map((record, index) => dbRecordToSheetRow(record, 'incoming', index));
@@ -346,8 +353,9 @@ async function loadOutgoingData() {
     showLoading('Loading outgoing funds...');
     const result = await fetchFinancialData('outgoing');
 
-    // Clear existing record IDs
+    // Clear existing record IDs and deleted IDs
     recordIds.outgoing.clear();
+    deletedRecordIds.outgoing.clear();
 
     if (result.success && result.data) {
       const sheetData = result.data.map((record, index) => dbRecordToSheetRow(record, 'outgoing', index));
@@ -448,6 +456,29 @@ async function initIncomingSheet() {
         updateBalance();
       },
       ondeleterow: function(instance, rowNumber, numOfRows) {
+        // Track deleted rows that exist in database
+        for (let i = 0; i < numOfRows; i++) {
+          const deletedRowIndex = rowNumber + i;
+          if (recordIds.incoming.has(deletedRowIndex)) {
+            const recordId = recordIds.incoming.get(deletedRowIndex);
+            deletedRecordIds.incoming.add(recordId);
+            console.log('Marked incoming record for deletion:', recordId);
+          }
+        }
+
+        // Update row index mapping after deletion
+        const newMapping = new Map();
+        let newIndex = 0;
+        recordIds.incoming.forEach((id, oldIndex) => {
+          if (oldIndex < rowNumber) {
+            newMapping.set(newIndex++, id);
+          } else if (oldIndex >= rowNumber + numOfRows) {
+            newMapping.set(newIndex++, id);
+          }
+          // Skip deleted rows
+        });
+        recordIds.incoming = newMapping;
+
         setTimeout(() => {
           updateTotalNetIncome();
           updateBalance();
@@ -537,6 +568,29 @@ async function initOutgoingSheet() {
         updateBalance();
       },
       ondeleterow: function(instance, rowNumber, numOfRows) {
+        // Track deleted rows that exist in database
+        for (let i = 0; i < numOfRows; i++) {
+          const deletedRowIndex = rowNumber + i;
+          if (recordIds.outgoing.has(deletedRowIndex)) {
+            const recordId = recordIds.outgoing.get(deletedRowIndex);
+            deletedRecordIds.outgoing.add(recordId);
+            console.log('Marked outgoing record for deletion:', recordId);
+          }
+        }
+
+        // Update row index mapping after deletion
+        const newMapping = new Map();
+        let newIndex = 0;
+        recordIds.outgoing.forEach((id, oldIndex) => {
+          if (oldIndex < rowNumber) {
+            newMapping.set(newIndex++, id);
+          } else if (oldIndex >= rowNumber + numOfRows) {
+            newMapping.set(newIndex++, id);
+          }
+          // Skip deleted rows
+        });
+        recordIds.outgoing = newMapping;
+
         setTimeout(() => {
           updateTotalOutgoing();
           updateBalance();
@@ -753,7 +807,35 @@ function setupSaveButton() {
       const outgoingData = outgoingSheet[0].getData();
 
       let totalSaved = 0;
+      let totalDeleted = 0;
       const errors = [];
+
+      // First, delete marked records from database
+      if (deletedRecordIds.incoming.size > 0) {
+        for (const recordId of deletedRecordIds.incoming) {
+          try {
+            await deleteRecord('incoming', recordId);
+            totalDeleted++;
+            console.log('Deleted incoming record:', recordId);
+          } catch (error) {
+            errors.push(`Failed to delete incoming record ${recordId}: ${error.message}`);
+          }
+        }
+        deletedRecordIds.incoming.clear();
+      }
+
+      if (deletedRecordIds.outgoing.size > 0) {
+        for (const recordId of deletedRecordIds.outgoing) {
+          try {
+            await deleteRecord('outgoing', recordId);
+            totalDeleted++;
+            console.log('Deleted outgoing record:', recordId);
+          } catch (error) {
+            errors.push(`Failed to delete outgoing record ${recordId}: ${error.message}`);
+          }
+        }
+        deletedRecordIds.outgoing.clear();
+      }
 
       // Filter out empty rows and rows that already exist in database (have a recordId)
       // Only save NEW rows
@@ -845,9 +927,12 @@ function setupSaveButton() {
       // Show results
       if (errors.length > 0) {
         console.error('Save errors:', errors);
-        updateStatusMessage(`Saved ${totalSaved} records with ${errors.length} errors. Check console for details.`, 'warning');
-      } else if (totalSaved > 0) {
-        updateStatusMessage(`Successfully saved ${totalSaved} records!`, 'success');
+        updateStatusMessage(`Saved ${totalSaved} records, deleted ${totalDeleted} records with ${errors.length} errors. Check console for details.`, 'warning');
+      } else if (totalSaved > 0 || totalDeleted > 0) {
+        const messages = [];
+        if (totalSaved > 0) messages.push(`saved ${totalSaved} record${totalSaved > 1 ? 's' : ''}`);
+        if (totalDeleted > 0) messages.push(`deleted ${totalDeleted} record${totalDeleted > 1 ? 's' : ''}`);
+        updateStatusMessage(`Successfully ${messages.join(' and ')}!`, 'success');
 
         // Reload data from database to get IDs and audit info
         setTimeout(async () => {
@@ -858,7 +943,7 @@ function setupSaveButton() {
           updateBalance();
         }, 1000);
       } else {
-        updateStatusMessage('No data to save (rows must have at least date and amount)', 'info');
+        updateStatusMessage('No changes to save', 'info');
       }
 
     } catch (error) {
