@@ -251,8 +251,16 @@ async function deleteRecord(type, recordId) {
 // Data Transformation Functions
 // ==================================================
 
-function dbRecordToSheetRow(record, type) {
+// Store record IDs separately to track which rows are in database
+const recordIds = {
+  incoming: new Map(), // row index -> database UUID
+  outgoing: new Map()
+};
+
+function dbRecordToSheetRow(record, type, rowIndex) {
+  // Store the database ID for this row
   if (type === 'incoming') {
+    recordIds.incoming.set(rowIndex, record.id);
     return [
       record.date,
       record.amount,
@@ -263,6 +271,7 @@ function dbRecordToSheetRow(record, type) {
       record.approved_by
     ];
   } else {
+    recordIds.outgoing.set(rowIndex, record.id);
     return [
       record.date,
       record.amount,
@@ -314,8 +323,11 @@ async function loadIncomingData() {
     showLoading('Loading incoming funds...');
     const result = await fetchFinancialData('incoming');
 
+    // Clear existing record IDs
+    recordIds.incoming.clear();
+
     if (result.success && result.data) {
-      const sheetData = result.data.map(record => dbRecordToSheetRow(record, 'incoming'));
+      const sheetData = result.data.map((record, index) => dbRecordToSheetRow(record, 'incoming', index));
       return sheetData;
     }
 
@@ -334,8 +346,11 @@ async function loadOutgoingData() {
     showLoading('Loading outgoing funds...');
     const result = await fetchFinancialData('outgoing');
 
+    // Clear existing record IDs
+    recordIds.outgoing.clear();
+
     if (result.success && result.data) {
-      const sheetData = result.data.map(record => dbRecordToSheetRow(record, 'outgoing'));
+      const sheetData = result.data.map((record, index) => dbRecordToSheetRow(record, 'outgoing', index));
       return sheetData;
     }
 
@@ -740,18 +755,28 @@ function setupSaveButton() {
       let totalSaved = 0;
       const errors = [];
 
-      // Filter out empty rows and prepare data
-      const incomingRows = incomingData.filter(row =>
-        row && row[0] && row[1] // Must have date and amount
-      );
+      // Filter out empty rows and rows that already exist in database (have a recordId)
+      // Only save NEW rows
+      const newIncomingRows = incomingData
+        .map((row, index) => ({ row, index }))
+        .filter(({ row, index }) =>
+          row && row[0] && row[1] && !recordIds.incoming.has(index) // Has data and NOT in database
+        );
 
-      const outgoingRows = outgoingData.filter(row =>
-        row && row[0] && row[1] // Must have date and amount
-      );
+      const newOutgoingRows = outgoingData
+        .map((row, index) => ({ row, index }))
+        .filter(({ row, index }) =>
+          row && row[0] && row[1] && !recordIds.outgoing.has(index) // Has data and NOT in database
+        );
+
+      console.log('New rows to save:', {
+        incoming: newIncomingRows.length,
+        outgoing: newOutgoingRows.length
+      });
 
       // Save incoming funds using batch API
-      if (incomingRows.length > 0) {
-        const operations = incomingRows.map(row => ({
+      if (newIncomingRows.length > 0) {
+        const operations = newIncomingRows.map(({ row }) => ({
           date: row[0],
           amount: parseFloat(String(row[1]).replace(/[£,\s]/g, '')) || 0,
           source: row[2] || 'Other',
@@ -783,8 +808,8 @@ function setupSaveButton() {
       }
 
       // Save outgoing funds using batch API
-      if (outgoingRows.length > 0) {
-        const operations = outgoingRows.map(row => ({
+      if (newOutgoingRows.length > 0) {
+        const operations = newOutgoingRows.map(({ row }) => ({
           date: row[0],
           amount: parseFloat(String(row[1]).replace(/[£,\s]/g, '')) || 0,
           recipient: row[2] || 'Unknown',
