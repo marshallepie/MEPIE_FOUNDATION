@@ -413,7 +413,8 @@ async function initIncomingSheet() {
         console.log('Cell changed:', { col, row, value });
 
         // Recalculate net income when amount or source changes
-        if (col === '1' || col === '2') {
+        // col is passed as a number
+        if (col === 1 || col === 2) {
           const amount = instance.getValueFromCoords(1, row);
           const source = instance.getValueFromCoords(2, row);
 
@@ -424,6 +425,8 @@ async function initIncomingSheet() {
 
           const netIncome = calculateNetIncome(cleanAmount, source);
           instance.setValueFromCoords(4, row, netIncome, true);
+
+          console.log('Updated net income:', { row, amount: cleanAmount, source, netIncome });
         }
 
         updateTotalNetIncome();
@@ -731,18 +734,111 @@ function setupSaveButton() {
     showLoading('Saving changes...');
 
     try {
-      // For now, save all data (in future, only save dirty rows)
       const incomingData = incomingSheet[0].getData();
       const outgoingData = outgoingSheet[0].getData();
 
-      // Note: This is a simplified save - in production you'd track individual row changes
-      // and only save modified/new rows using the batch API
+      let totalSaved = 0;
+      const errors = [];
 
-      updateStatusMessage('Save functionality coming soon - full batch save will be implemented', 'info');
+      // Filter out empty rows and prepare data
+      const incomingRows = incomingData.filter(row =>
+        row && row[0] && row[1] // Must have date and amount
+      );
+
+      const outgoingRows = outgoingData.filter(row =>
+        row && row[0] && row[1] // Must have date and amount
+      );
+
+      // Save incoming funds using batch API
+      if (incomingRows.length > 0) {
+        const operations = incomingRows.map(row => ({
+          date: row[0],
+          amount: parseFloat(String(row[1]).replace(/[£,\s]/g, '')) || 0,
+          source: row[2] || 'Other',
+          donor_initials: row[3] || null,
+          purpose_note: row[5] || null,
+          approved_by: row[6] || currentUserName
+        }));
+
+        try {
+          const result = await apiRequest('finance-mutate', {
+            method: 'POST',
+            body: JSON.stringify({
+              sessionToken,
+              action: 'batch',
+              type: 'incoming',
+              operations
+            })
+          });
+
+          if (result.success) {
+            totalSaved += result.processed;
+            if (result.errors && result.errors.length > 0) {
+              errors.push(...result.errors);
+            }
+          }
+        } catch (error) {
+          errors.push(`Incoming funds error: ${error.message}`);
+        }
+      }
+
+      // Save outgoing funds using batch API
+      if (outgoingRows.length > 0) {
+        const operations = outgoingRows.map(row => ({
+          date: row[0],
+          amount: parseFloat(String(row[1]).replace(/[£,\s]/g, '')) || 0,
+          recipient: row[2] || 'Unknown',
+          purpose: row[3] || 'No description',
+          category: row[4] || 'Other',
+          approved_by: row[5] || currentUserName
+        }));
+
+        try {
+          const result = await apiRequest('finance-mutate', {
+            method: 'POST',
+            body: JSON.stringify({
+              sessionToken,
+              action: 'batch',
+              type: 'outgoing',
+              operations
+            })
+          });
+
+          if (result.success) {
+            totalSaved += result.processed;
+            if (result.errors && result.errors.length > 0) {
+              errors.push(...result.errors);
+            }
+          }
+        } catch (error) {
+          errors.push(`Outgoing funds error: ${error.message}`);
+        }
+      }
 
       hideLoading();
+
+      // Show results
+      if (errors.length > 0) {
+        console.error('Save errors:', errors);
+        updateStatusMessage(`Saved ${totalSaved} records with ${errors.length} errors. Check console for details.`, 'warning');
+      } else if (totalSaved > 0) {
+        updateStatusMessage(`Successfully saved ${totalSaved} records!`, 'success');
+
+        // Reload data from database to get IDs and audit info
+        setTimeout(async () => {
+          await initIncomingSheet();
+          await initOutgoingSheet();
+          updateTotalNetIncome();
+          updateTotalOutgoing();
+          updateBalance();
+        }, 1000);
+      } else {
+        updateStatusMessage('No data to save (rows must have at least date and amount)', 'info');
+      }
+
     } catch (error) {
       hideLoading();
+      console.error('Save error:', error);
       updateStatusMessage(`Save failed: ${error.message}`, 'warning');
     }
   });
