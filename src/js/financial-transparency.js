@@ -193,6 +193,11 @@ async function fetchFinancialData(type = 'all') {
       method: 'GET'
     });
 
+    console.log(`Fetched ${type} data:`, result.data ? `${result.data.length} records` : 'no data');
+    if (result.data && result.data.length > 0) {
+      console.log('First record:', result.data[0]);
+    }
+
     return result;
   } catch (error) {
     throw new Error(`Failed to fetch ${type} data: ${error.message}`);
@@ -382,7 +387,14 @@ async function initIncomingSheet() {
 
   console.log('Initializing incoming sheet with data:', data);
 
-  incomingSheet = jspreadsheet(document.getElementById('incomingSpreadsheet'), {
+  // Destroy existing sheet if it exists
+  const container = document.getElementById('incomingSpreadsheet');
+  if (incomingSheet && incomingSheet.length > 0) {
+    console.log('Destroying existing incoming sheet');
+    jspreadsheet.destroy(container);
+  }
+
+  incomingSheet = jspreadsheet(container, {
     worksheets: [{
       data: data,
       columns: [
@@ -491,7 +503,14 @@ async function initOutgoingSheet() {
 
   console.log('Initializing outgoing sheet with data:', data);
 
-  outgoingSheet = jspreadsheet(document.getElementById('outgoingSpreadsheet'), {
+  // Destroy existing sheet if it exists
+  const container = document.getElementById('outgoingSpreadsheet');
+  if (outgoingSheet && outgoingSheet.length > 0) {
+    console.log('Destroying existing outgoing sheet');
+    jspreadsheet.destroy(container);
+  }
+
+  outgoingSheet = jspreadsheet(container, {
     worksheets: [{
       data: data,
       columns: [
