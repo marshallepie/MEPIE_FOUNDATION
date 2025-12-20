@@ -23,12 +23,6 @@ const dirtyRows = {
   outgoing: new Set()
 };
 
-// Track deleted rows (that exist in database)
-const deletedRecordIds = {
-  incoming: new Set(),
-  outgoing: new Set()
-};
-
 // Valid options
 const approvers = ['Marshall Epie', 'Aruna Ramineni', 'Fitz Shrowder'];
 const sources = ['GoFundMe', 'Stripe', 'Bank Transfer', 'Check', 'Cash', 'Other'];
@@ -329,9 +323,8 @@ async function loadIncomingData() {
     showLoading('Loading incoming funds...');
     const result = await fetchFinancialData('incoming');
 
-    // Clear existing record IDs and deleted IDs
+    // Clear existing record IDs
     recordIds.incoming.clear();
-    deletedRecordIds.incoming.clear();
 
     if (result.success && result.data) {
       const sheetData = result.data.map((record, index) => dbRecordToSheetRow(record, 'incoming', index));
@@ -353,9 +346,8 @@ async function loadOutgoingData() {
     showLoading('Loading outgoing funds...');
     const result = await fetchFinancialData('outgoing');
 
-    // Clear existing record IDs and deleted IDs
+    // Clear existing record IDs
     recordIds.outgoing.clear();
-    deletedRecordIds.outgoing.clear();
 
     if (result.success && result.data) {
       const sheetData = result.data.map((record, index) => dbRecordToSheetRow(record, 'outgoing', index));
@@ -455,14 +447,21 @@ async function initIncomingSheet() {
         updateTotalNetIncome();
         updateBalance();
       },
-      ondeleterow: function(instance, rowNumber, numOfRows) {
-        // Track deleted rows that exist in database
+      ondeleterow: async function(instance, rowNumber, numOfRows) {
+        // Delete rows immediately from database if they exist
         for (let i = 0; i < numOfRows; i++) {
           const deletedRowIndex = rowNumber + i;
           if (recordIds.incoming.has(deletedRowIndex)) {
             const recordId = recordIds.incoming.get(deletedRowIndex);
-            deletedRecordIds.incoming.add(recordId);
-            console.log('Marked incoming record for deletion:', recordId);
+            console.log('Deleting incoming record immediately:', recordId);
+
+            try {
+              await deleteRecord('incoming', recordId);
+              console.log('Successfully deleted incoming record:', recordId);
+            } catch (error) {
+              console.error('Failed to delete incoming record:', error);
+              updateStatusMessage(`Failed to delete record: ${error.message}`, 'error');
+            }
           }
         }
 
@@ -567,14 +566,21 @@ async function initOutgoingSheet() {
         updateTotalOutgoing();
         updateBalance();
       },
-      ondeleterow: function(instance, rowNumber, numOfRows) {
-        // Track deleted rows that exist in database
+      ondeleterow: async function(instance, rowNumber, numOfRows) {
+        // Delete rows immediately from database if they exist
         for (let i = 0; i < numOfRows; i++) {
           const deletedRowIndex = rowNumber + i;
           if (recordIds.outgoing.has(deletedRowIndex)) {
             const recordId = recordIds.outgoing.get(deletedRowIndex);
-            deletedRecordIds.outgoing.add(recordId);
-            console.log('Marked outgoing record for deletion:', recordId);
+            console.log('Deleting outgoing record immediately:', recordId);
+
+            try {
+              await deleteRecord('outgoing', recordId);
+              console.log('Successfully deleted outgoing record:', recordId);
+            } catch (error) {
+              console.error('Failed to delete outgoing record:', error);
+              updateStatusMessage(`Failed to delete record: ${error.message}`, 'error');
+            }
           }
         }
 
@@ -807,35 +813,7 @@ function setupSaveButton() {
       const outgoingData = outgoingSheet[0].getData();
 
       let totalSaved = 0;
-      let totalDeleted = 0;
       const errors = [];
-
-      // First, delete marked records from database
-      if (deletedRecordIds.incoming.size > 0) {
-        for (const recordId of deletedRecordIds.incoming) {
-          try {
-            await deleteRecord('incoming', recordId);
-            totalDeleted++;
-            console.log('Deleted incoming record:', recordId);
-          } catch (error) {
-            errors.push(`Failed to delete incoming record ${recordId}: ${error.message}`);
-          }
-        }
-        deletedRecordIds.incoming.clear();
-      }
-
-      if (deletedRecordIds.outgoing.size > 0) {
-        for (const recordId of deletedRecordIds.outgoing) {
-          try {
-            await deleteRecord('outgoing', recordId);
-            totalDeleted++;
-            console.log('Deleted outgoing record:', recordId);
-          } catch (error) {
-            errors.push(`Failed to delete outgoing record ${recordId}: ${error.message}`);
-          }
-        }
-        deletedRecordIds.outgoing.clear();
-      }
 
       // Filter out empty rows and rows that already exist in database (have a recordId)
       // Only save NEW rows
@@ -927,12 +905,9 @@ function setupSaveButton() {
       // Show results
       if (errors.length > 0) {
         console.error('Save errors:', errors);
-        updateStatusMessage(`Saved ${totalSaved} records, deleted ${totalDeleted} records with ${errors.length} errors. Check console for details.`, 'warning');
-      } else if (totalSaved > 0 || totalDeleted > 0) {
-        const messages = [];
-        if (totalSaved > 0) messages.push(`saved ${totalSaved} record${totalSaved > 1 ? 's' : ''}`);
-        if (totalDeleted > 0) messages.push(`deleted ${totalDeleted} record${totalDeleted > 1 ? 's' : ''}`);
-        updateStatusMessage(`Successfully ${messages.join(' and ')}!`, 'success');
+        updateStatusMessage(`Saved ${totalSaved} records with ${errors.length} errors. Check console for details.`, 'warning');
+      } else if (totalSaved > 0) {
+        updateStatusMessage(`Successfully saved ${totalSaved} record${totalSaved > 1 ? 's' : ''}!`, 'success');
 
         // Reload data from database to get IDs and audit info
         setTimeout(async () => {
