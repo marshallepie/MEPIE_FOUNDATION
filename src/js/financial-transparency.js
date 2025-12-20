@@ -226,9 +226,14 @@ async function saveRecord(type, data, recordId = null) {
 }
 
 async function deleteRecord(type, recordId) {
+  console.log('deleteRecord called with type:', type, 'recordId:', recordId);
+
   if (!sessionToken) {
+    console.error('deleteRecord: No session token!');
     throw new Error('Not authenticated');
   }
+
+  console.log('deleteRecord: Making API request...');
 
   try {
     const result = await apiRequest('finance-mutate', {
@@ -241,8 +246,10 @@ async function deleteRecord(type, recordId) {
       })
     });
 
+    console.log('deleteRecord: API response:', result);
     return result;
   } catch (error) {
+    console.error('deleteRecord: API error:', error);
     throw new Error(`Failed to delete record: ${error.message}`);
   }
 }
@@ -261,6 +268,7 @@ function dbRecordToSheetRow(record, type, rowIndex) {
   // Store the database ID for this row
   if (type === 'incoming') {
     recordIds.incoming.set(rowIndex, record.id);
+    console.log('Stored incoming record ID:', record.id, 'at row index:', rowIndex);
     return [
       record.date,
       record.amount,
@@ -272,6 +280,7 @@ function dbRecordToSheetRow(record, type, rowIndex) {
     ];
   } else {
     recordIds.outgoing.set(rowIndex, record.id);
+    console.log('Stored outgoing record ID:', record.id, 'at row index:', rowIndex);
     return [
       record.date,
       record.amount,
@@ -447,21 +456,30 @@ async function initIncomingSheet() {
         updateTotalNetIncome();
         updateBalance();
       },
-      ondeleterow: async function(instance, rowNumber, numOfRows) {
+      ondeleterow: function(instance, rowNumber, numOfRows) {
+        console.log('ondeleterow called for incoming, rowNumber:', rowNumber, 'numOfRows:', numOfRows);
+
         // Delete rows immediately from database if they exist
         for (let i = 0; i < numOfRows; i++) {
           const deletedRowIndex = rowNumber + i;
+          console.log('Checking row index:', deletedRowIndex, 'Has recordId:', recordIds.incoming.has(deletedRowIndex));
+
           if (recordIds.incoming.has(deletedRowIndex)) {
             const recordId = recordIds.incoming.get(deletedRowIndex);
             console.log('Deleting incoming record immediately:', recordId);
 
-            try {
-              await deleteRecord('incoming', recordId);
-              console.log('Successfully deleted incoming record:', recordId);
-            } catch (error) {
-              console.error('Failed to delete incoming record:', error);
-              updateStatusMessage(`Failed to delete record: ${error.message}`, 'error');
-            }
+            // Delete asynchronously but don't await (jspreadsheet doesn't handle async well)
+            deleteRecord('incoming', recordId)
+              .then(() => {
+                console.log('Successfully deleted incoming record:', recordId);
+                updateStatusMessage('Record deleted', 'success');
+              })
+              .catch(error => {
+                console.error('Failed to delete incoming record:', error);
+                updateStatusMessage(`Failed to delete record: ${error.message}`, 'error');
+              });
+          } else {
+            console.log('Row', deletedRowIndex, 'is new (not in database), no deletion needed');
           }
         }
 
@@ -566,21 +584,30 @@ async function initOutgoingSheet() {
         updateTotalOutgoing();
         updateBalance();
       },
-      ondeleterow: async function(instance, rowNumber, numOfRows) {
+      ondeleterow: function(instance, rowNumber, numOfRows) {
+        console.log('ondeleterow called for outgoing, rowNumber:', rowNumber, 'numOfRows:', numOfRows);
+
         // Delete rows immediately from database if they exist
         for (let i = 0; i < numOfRows; i++) {
           const deletedRowIndex = rowNumber + i;
+          console.log('Checking row index:', deletedRowIndex, 'Has recordId:', recordIds.outgoing.has(deletedRowIndex));
+
           if (recordIds.outgoing.has(deletedRowIndex)) {
             const recordId = recordIds.outgoing.get(deletedRowIndex);
             console.log('Deleting outgoing record immediately:', recordId);
 
-            try {
-              await deleteRecord('outgoing', recordId);
-              console.log('Successfully deleted outgoing record:', recordId);
-            } catch (error) {
-              console.error('Failed to delete outgoing record:', error);
-              updateStatusMessage(`Failed to delete record: ${error.message}`, 'error');
-            }
+            // Delete asynchronously but don't await (jspreadsheet doesn't handle async well)
+            deleteRecord('outgoing', recordId)
+              .then(() => {
+                console.log('Successfully deleted outgoing record:', recordId);
+                updateStatusMessage('Record deleted', 'success');
+              })
+              .catch(error => {
+                console.error('Failed to delete outgoing record:', error);
+                updateStatusMessage(`Failed to delete record: ${error.message}`, 'error');
+              });
+          } else {
+            console.log('Row', deletedRowIndex, 'is new (not in database), no deletion needed');
           }
         }
 
