@@ -4,7 +4,8 @@
   "description": "MEPIE Foundation - UK Charitable Incorporated Organisation website",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "netlify dev",
+    "dev:vite": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "format": "prettier --write \"src/**/*.{html,css,js}\"",
