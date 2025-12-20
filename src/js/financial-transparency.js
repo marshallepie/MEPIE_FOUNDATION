@@ -433,6 +433,45 @@ async function initIncomingSheet() {
         }
       ],
       minDimensions: [7, 10],
+      contextMenu: function(obj, x, y, e, items) {
+        // Override the delete row functionality
+        const deleteIndex = items.findIndex(item => item && item.title === 'Delete selected rows');
+        if (deleteIndex !== -1) {
+          const originalOnclick = items[deleteIndex].onclick;
+          items[deleteIndex].onclick = function() {
+            const selectedRows = obj.getSelectedRows(true); // Get selected row indices
+            console.log('Custom delete triggered for incoming rows:', selectedRows);
+
+            // Delete from database first
+            selectedRows.forEach(rowIndex => {
+              if (recordIds.incoming.has(rowIndex)) {
+                const recordId = recordIds.incoming.get(rowIndex);
+                console.log('Deleting incoming record:', recordId, 'at row:', rowIndex);
+
+                deleteRecord('incoming', recordId)
+                  .then(() => {
+                    console.log('Successfully deleted incoming record:', recordId);
+                    updateStatusMessage('Record deleted', 'success');
+                  })
+                  .catch(error => {
+                    console.error('Failed to delete incoming record:', error);
+                    updateStatusMessage(`Failed to delete record: ${error.message}`, 'error');
+                  });
+              }
+            });
+
+            // Then call the original delete to remove from UI
+            if (originalOnclick) originalOnclick();
+
+            // Update totals
+            setTimeout(() => {
+              updateTotalNetIncome();
+              updateBalance();
+            }, 100);
+          };
+        }
+        return items;
+      },
       onchange: function(instance, cell, col, row, value) {
         console.log('Cell changed:', { col, row, value });
 
@@ -455,51 +494,6 @@ async function initIncomingSheet() {
 
         updateTotalNetIncome();
         updateBalance();
-      },
-      ondeleterow: function(instance, rowNumber, numOfRows) {
-        console.log('ondeleterow called for incoming, rowNumber:', rowNumber, 'numOfRows:', numOfRows);
-
-        // Delete rows immediately from database if they exist
-        for (let i = 0; i < numOfRows; i++) {
-          const deletedRowIndex = rowNumber + i;
-          console.log('Checking row index:', deletedRowIndex, 'Has recordId:', recordIds.incoming.has(deletedRowIndex));
-
-          if (recordIds.incoming.has(deletedRowIndex)) {
-            const recordId = recordIds.incoming.get(deletedRowIndex);
-            console.log('Deleting incoming record immediately:', recordId);
-
-            // Delete asynchronously but don't await (jspreadsheet doesn't handle async well)
-            deleteRecord('incoming', recordId)
-              .then(() => {
-                console.log('Successfully deleted incoming record:', recordId);
-                updateStatusMessage('Record deleted', 'success');
-              })
-              .catch(error => {
-                console.error('Failed to delete incoming record:', error);
-                updateStatusMessage(`Failed to delete record: ${error.message}`, 'error');
-              });
-          } else {
-            console.log('Row', deletedRowIndex, 'is new (not in database), no deletion needed');
-          }
-        }
-
-        // Update row index mapping after deletion
-        const newMapping = new Map();
-        let newIndex = 0;
-        recordIds.incoming.forEach((id, oldIndex) => {
-          if (oldIndex < rowNumber) {
-            newMapping.set(newIndex++, id);
-          } else if (oldIndex >= rowNumber + numOfRows) {
-            newMapping.set(newIndex++, id);
-          }
-          // Skip deleted rows
-        });
-        recordIds.incoming = newMapping;
-
-        setTimeout(() => {
-          updateTotalNetIncome();
-          updateBalance();
-        }, 100);
       },
       oninsertrow: function(instance) {
         setTimeout(() => {
@@ -579,55 +573,49 @@ async function initOutgoingSheet() {
         }
       ],
       minDimensions: [6, 10],
+      contextMenu: function(obj, x, y, e, items) {
+        // Override the delete row functionality
+        const deleteIndex = items.findIndex(item => item && item.title === 'Delete selected rows');
+        if (deleteIndex !== -1) {
+          const originalOnclick = items[deleteIndex].onclick;
+          items[deleteIndex].onclick = function() {
+            const selectedRows = obj.getSelectedRows(true); // Get selected row indices
+            console.log('Custom delete triggered for outgoing rows:', selectedRows);
+
+            // Delete from database first
+            selectedRows.forEach(rowIndex => {
+              if (recordIds.outgoing.has(rowIndex)) {
+                const recordId = recordIds.outgoing.get(rowIndex);
+                console.log('Deleting outgoing record:', recordId, 'at row:', rowIndex);
+
+                deleteRecord('outgoing', recordId)
+                  .then(() => {
+                    console.log('Successfully deleted outgoing record:', recordId);
+                    updateStatusMessage('Record deleted', 'success');
+                  })
+                  .catch(error => {
+                    console.error('Failed to delete outgoing record:', error);
+                    updateStatusMessage(`Failed to delete record: ${error.message}`, 'error');
+                  });
+              }
+            });
+
+            // Then call the original delete to remove from UI
+            if (originalOnclick) originalOnclick();
+
+            // Update totals
+            setTimeout(() => {
+              updateTotalOutgoing();
+              updateBalance();
+            }, 100);
+          };
+        }
+        return items;
+      },
       onchange: function(instance, cell, col, row, value) {
         console.log('Cell changed:', { col, row, value });
         updateTotalOutgoing();
         updateBalance();
-      },
-      ondeleterow: function(instance, rowNumber, numOfRows) {
-        console.log('ondeleterow called for outgoing, rowNumber:', rowNumber, 'numOfRows:', numOfRows);
-
-        // Delete rows immediately from database if they exist
-        for (let i = 0; i < numOfRows; i++) {
-          const deletedRowIndex = rowNumber + i;
-          console.log('Checking row index:', deletedRowIndex, 'Has recordId:', recordIds.outgoing.has(deletedRowIndex));
-
-          if (recordIds.outgoing.has(deletedRowIndex)) {
-            const recordId = recordIds.outgoing.get(deletedRowIndex);
-            console.log('Deleting outgoing record immediately:', recordId);
-
-            // Delete asynchronously but don't await (jspreadsheet doesn't handle async well)
-            deleteRecord('outgoing', recordId)
-              .then(() => {
-                console.log('Successfully deleted outgoing record:', recordId);
-                updateStatusMessage('Record deleted', 'success');
-              })
-              .catch(error => {
-                console.error('Failed to delete outgoing record:', error);
-                updateStatusMessage(`Failed to delete record: ${error.message}`, 'error');
-              });
-          } else {
-            console.log('Row', deletedRowIndex, 'is new (not in database), no deletion needed');
-          }
-        }
-
-        // Update row index mapping after deletion
-        const newMapping = new Map();
-        let newIndex = 0;
-        recordIds.outgoing.forEach((id, oldIndex) => {
-          if (oldIndex < rowNumber) {
-            newMapping.set(newIndex++, id);
-          } else if (oldIndex >= rowNumber + numOfRows) {
-            newMapping.set(newIndex++, id);
-          }
-          // Skip deleted rows
-        });
-        recordIds.outgoing = newMapping;
-
-        setTimeout(() => {
-          updateTotalOutgoing();
-          updateBalance();
-        }, 100);
       },
       oninsertrow: function(instance) {
         setTimeout(() => {
@@ -799,13 +787,16 @@ function setupLogoutButton() {
 
 function toggleEditMode(enabled) {
   isEditMode = enabled;
+  console.log('toggleEditMode called with enabled:', enabled);
 
   if (incomingSheet && incomingSheet[0] && incomingSheet[0].options) {
     incomingSheet[0].options.editable = enabled;
+    console.log('Incoming sheet editable set to:', enabled, 'Current value:', incomingSheet[0].options.editable);
   }
 
   if (outgoingSheet && outgoingSheet[0] && outgoingSheet[0].options) {
     outgoingSheet[0].options.editable = enabled;
+    console.log('Outgoing sheet editable set to:', enabled, 'Current value:', outgoingSheet[0].options.editable);
   }
 
   document.getElementById('saveBtn').disabled = !enabled;
