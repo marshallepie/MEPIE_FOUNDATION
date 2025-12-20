@@ -270,7 +270,6 @@ function dbRecordToSheetRow(record, type, rowIndex) {
     recordIds.incoming.set(rowIndex, record.id);
     console.log('Stored incoming record ID:', record.id, 'at row index:', rowIndex);
     return [
-      '🗑️', // Delete button column
       record.date,
       record.amount,
       record.source,
@@ -283,7 +282,6 @@ function dbRecordToSheetRow(record, type, rowIndex) {
     recordIds.outgoing.set(rowIndex, record.id);
     console.log('Stored outgoing record ID:', record.id, 'at row index:', rowIndex);
     return [
-      '🗑️', // Delete button column
       record.date,
       record.amount,
       record.recipient,
@@ -297,21 +295,21 @@ function dbRecordToSheetRow(record, type, rowIndex) {
 function sheetRowToDbRecord(row, type) {
   if (type === 'incoming') {
     return {
-      date: row[1],  // Skip row[0] which is delete button
-      amount: parseFloat(String(row[2]).replace(/[£,\s]/g, '')) || 0,
-      source: row[3],
-      donor_initials: row[4] || null,
-      purpose_note: row[6] || null,
-      approved_by: row[7]
+      date: row[0],
+      amount: parseFloat(String(row[1]).replace(/[£,\s]/g, '')) || 0,
+      source: row[2],
+      donor_initials: row[3] || null,
+      purpose_note: row[5] || null,
+      approved_by: row[6]
     };
   } else {
     return {
-      date: row[1],  // Skip row[0] which is delete button
-      amount: parseFloat(String(row[2]).replace(/[£,\s]/g, '')) || 0,
-      recipient: row[3],
-      purpose: row[4],
-      category: row[5],
-      approved_by: row[6]
+      date: row[0],
+      amount: parseFloat(String(row[1]).replace(/[£,\s]/g, '')) || 0,
+      recipient: row[2],
+      purpose: row[3],
+      category: row[4],
+      approved_by: row[5]
     };
   }
 }
@@ -389,12 +387,6 @@ async function initIncomingSheet() {
       data: data,
       columns: [
         {
-          title: 'Delete',
-          type: 'text',
-          width: 50,
-          readOnly: true
-        },
-        {
           title: 'Date',
           type: 'calendar',
           width: 120,
@@ -440,15 +432,14 @@ async function initIncomingSheet() {
           source: approvers
         }
       ],
-      minDimensions: [8, 10],
+      minDimensions: [7, 10],
       onchange: function(instance, cell, col, row, value) {
         console.log('Cell changed:', { col, row, value });
 
         // Recalculate net income when amount or source changes
-        // col is passed as a number (now shifted by 1 due to delete column)
-        if (col === 2 || col === 3) {
-          const amount = instance.getValueFromCoords(2, row);
-          const source = instance.getValueFromCoords(3, row);
+        if (col === 1 || col === 2) {
+          const amount = instance.getValueFromCoords(1, row);
+          const source = instance.getValueFromCoords(2, row);
 
           let cleanAmount = amount;
           if (cleanAmount) {
@@ -456,7 +447,7 @@ async function initIncomingSheet() {
           }
 
           const netIncome = calculateNetIncome(cleanAmount, source);
-          instance.setValueFromCoords(5, row, netIncome, true);
+          instance.setValueFromCoords(4, row, netIncome, true);
 
           console.log('Updated net income:', { row, amount: cleanAmount, source, netIncome });
         }
@@ -480,13 +471,13 @@ async function initIncomingSheet() {
     const rowCount = instance.getConfig().data.length;
 
     for (let row = 0; row < rowCount; row++) {
-      const amount = instance.getValueFromCoords(2, row); // Column shifted by 1
-      const source = instance.getValueFromCoords(3, row);
+      const amount = instance.getValueFromCoords(1, row);
+      const source = instance.getValueFromCoords(2, row);
 
       if (amount && source) {
         let cleanAmount = String(amount).replace(/[£,\s]/g, '');
         const netIncome = calculateNetIncome(cleanAmount, source);
-        instance.setValueFromCoords(5, row, netIncome, true); // Column shifted by 1
+        instance.setValueFromCoords(4, row, netIncome, true);
       }
     }
   }
@@ -504,12 +495,6 @@ async function initOutgoingSheet() {
     worksheets: [{
       data: data,
       columns: [
-        {
-          title: 'Delete',
-          type: 'text',
-          width: 50,
-          readOnly: true
-        },
         {
           title: 'Date',
           type: 'calendar',
@@ -550,7 +535,7 @@ async function initOutgoingSheet() {
           source: approvers
         }
       ],
-      minDimensions: [7, 10],
+      minDimensions: [6, 10],
       onchange: function(instance, cell, col, row, value) {
         console.log('Cell changed:', { col, row, value });
         updateTotalOutgoing();
@@ -584,50 +569,67 @@ function addDeleteButtons(type) {
   }
 
   const container = document.getElementById(sheetId);
-  const tbody = container.querySelector('tbody');
+  const recordIdMap = type === 'incoming' ? recordIds.incoming : recordIds.outgoing;
 
-  if (!tbody) {
-    console.error('tbody not found for sheet:', type);
-    return;
-  }
+  // Find all row number cells (they have class 'jss_selectall' or similar)
+  const rowHeaders = container.querySelectorAll('tbody tr td:first-child');
 
-  const rows = tbody.querySelectorAll('tr');
-  console.log(`Adding delete button handlers to ${rows.length} ${type} rows`);
+  console.log(`Adding delete buttons to ${type} sheet, found ${rowHeaders.length} row headers, ${recordIdMap.size} records in database`);
 
-  rows.forEach((tr, rowIndex) => {
-    // Find the first cell (delete column)
-    const deleteCell = tr.querySelector('td');
-    if (!deleteCell) return;
+  rowHeaders.forEach((cell, rowIndex) => {
+    // Only add button if this row exists in database
+    if (!recordIdMap.has(rowIndex)) {
+      console.log(`Skipping row ${rowIndex} - not in database`);
+      return;
+    }
 
-    // Check if handler already added
-    if (deleteCell.classList.contains('delete-cell-active')) return;
-    deleteCell.classList.add('delete-cell-active');
+    // Check if button already added
+    if (cell.querySelector('.delete-btn')) return;
 
-    // Style the delete cell
-    deleteCell.style.cssText = `
-      text-align: center;
-      padding: 5px;
-      background: #f8f9fa;
-      border-right: 1px solid #ddd;
+    const recordId = recordIdMap.get(rowIndex);
+
+    // Create delete button
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'delete-btn';
+    deleteBtn.innerHTML = '🗑️';
+    deleteBtn.title = 'Delete this row';
+    deleteBtn.style.cssText = `
+      position: absolute;
+      right: 2px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 24px;
+      height: 24px;
+      border: 1px solid #dc3545;
+      background: #fff;
+      color: #dc3545;
+      border-radius: 3px;
       cursor: pointer;
-      font-size: 18px;
-      user-select: none;
+      font-size: 14px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.6;
+      transition: all 0.2s;
+      z-index: 10;
     `;
 
-    deleteCell.title = 'Click to delete this row';
-
-    // Add hover effect
-    deleteCell.addEventListener('mouseenter', () => {
-      deleteCell.style.background = '#ffebee';
+    deleteBtn.addEventListener('mouseenter', () => {
+      deleteBtn.style.opacity = '1';
+      deleteBtn.style.background = '#dc3545';
+      deleteBtn.style.color = '#fff';
     });
 
-    deleteCell.addEventListener('mouseleave', () => {
-      deleteCell.style.background = '#f8f9fa';
+    deleteBtn.addEventListener('mouseleave', () => {
+      deleteBtn.style.opacity = '0.6';
+      deleteBtn.style.background = '#fff';
+      deleteBtn.style.color = '#dc3545';
     });
 
-    // Add click handler
-    deleteCell.addEventListener('click', async (e) => {
+    deleteBtn.addEventListener('click', async (e) => {
       e.stopPropagation();
+      e.preventDefault();
 
       if (!isEditMode) {
         updateStatusMessage('Please enable editing first', 'warning');
@@ -639,51 +641,39 @@ function addDeleteButtons(type) {
         return;
       }
 
-      const recordIdMap = type === 'incoming' ? recordIds.incoming : recordIds.outgoing;
+      console.log(`Delete button clicked for ${type} record:`, recordId, 'at row:', rowIndex);
 
-      if (recordIdMap.has(rowIndex)) {
-        const recordId = recordIdMap.get(rowIndex);
-        console.log(`Deleting ${type} record:`, recordId, 'at row:', rowIndex);
+      if (confirm(`Are you sure you want to delete this ${type} record?`)) {
+        try {
+          showLoading('Deleting record...');
+          await deleteRecord(type, recordId);
+          console.log('Successfully deleted record:', recordId);
 
-        if (confirm(`Are you sure you want to delete this ${type} record?`)) {
-          try {
-            showLoading('Deleting record...');
-            await deleteRecord(type, recordId);
-            console.log('Successfully deleted record:', recordId);
+          hideLoading();
+          updateStatusMessage('Record deleted successfully', 'success');
 
-            // Remove from UI
-            sheet[0].deleteRow(rowIndex);
-
-            // Update totals
+          // Reload data to refresh
+          setTimeout(async () => {
             if (type === 'incoming') {
-              updateTotalNetIncome();
+              await initIncomingSheet();
             } else {
-              updateTotalOutgoing();
+              await initOutgoingSheet();
             }
+            updateTotalNetIncome();
+            updateTotalOutgoing();
             updateBalance();
-
-            hideLoading();
-            updateStatusMessage('Record deleted successfully', 'success');
-
-            // Reload data to refresh
-            setTimeout(async () => {
-              if (type === 'incoming') {
-                await initIncomingSheet();
-              } else {
-                await initOutgoingSheet();
-              }
-            }, 1000);
-          } catch (error) {
-            hideLoading();
-            console.error('Failed to delete record:', error);
-            updateStatusMessage(`Failed to delete: ${error.message}`, 'error');
-          }
+          }, 500);
+        } catch (error) {
+          hideLoading();
+          console.error('Failed to delete record:', error);
+          updateStatusMessage(`Failed to delete: ${error.message}`, 'error');
         }
-      } else {
-        // New row not yet saved
-        updateStatusMessage('This row is not saved yet, use right-click menu to delete', 'info');
       }
     });
+
+    // Make cell position relative to contain absolute button
+    cell.style.position = 'relative';
+    cell.appendChild(deleteBtn);
   });
 }
 
@@ -698,8 +688,8 @@ function updateTotalNetIncome() {
   let total = 0;
 
   data.forEach(row => {
-    if (row[5]) { // Column shifted by 1 (now at index 5 instead of 4)
-      let netIncome = String(row[5]).replace(/[£,\s]/g, '');
+    if (row[4]) {
+      let netIncome = String(row[4]).replace(/[£,\s]/g, '');
       total += parseFloat(netIncome) || 0;
     }
   });
@@ -717,8 +707,8 @@ function updateTotalOutgoing() {
   let total = 0;
 
   data.forEach(row => {
-    if (row[2]) { // Column shifted by 1 (now at index 2 instead of 1)
-      let amount = String(row[2]).replace(/[£,\s]/g, '');
+    if (row[1]) {
+      let amount = String(row[1]).replace(/[£,\s]/g, '');
       total += parseFloat(amount) || 0;
     }
   });
@@ -893,17 +883,17 @@ function setupSaveButton() {
       const errors = [];
 
       // Filter out empty rows and rows that already exist in database (have a recordId)
-      // Only save NEW rows (skip first column which is delete button)
+      // Only save NEW rows
       const newIncomingRows = incomingData
         .map((row, index) => ({ row, index }))
         .filter(({ row, index }) =>
-          row && row[1] && row[2] && !recordIds.incoming.has(index) // Check date and amount (skip delete column at row[0])
+          row && row[0] && row[1] && !recordIds.incoming.has(index) // Check date and amount
         );
 
       const newOutgoingRows = outgoingData
         .map((row, index) => ({ row, index }))
         .filter(({ row, index }) =>
-          row && row[1] && row[2] && !recordIds.outgoing.has(index) // Check date and amount (skip delete column at row[0])
+          row && row[0] && row[1] && !recordIds.outgoing.has(index) // Check date and amount
         );
 
       console.log('New rows to save:', {
@@ -914,12 +904,12 @@ function setupSaveButton() {
       // Save incoming funds using batch API
       if (newIncomingRows.length > 0) {
         const operations = newIncomingRows.map(({ row }) => ({
-          date: row[1],  // Skip row[0] which is delete button
-          amount: parseFloat(String(row[2]).replace(/[£,\s]/g, '')) || 0,
-          source: row[3] || 'Other',
-          donor_initials: row[4] || null,
-          purpose_note: row[6] || null,
-          approved_by: row[7] || currentUserName
+          date: row[0],
+          amount: parseFloat(String(row[1]).replace(/[£,\s]/g, '')) || 0,
+          source: row[2] || 'Other',
+          donor_initials: row[3] || null,
+          purpose_note: row[5] || null,
+          approved_by: row[6] || currentUserName
         }));
 
         try {
@@ -947,12 +937,12 @@ function setupSaveButton() {
       // Save outgoing funds using batch API
       if (newOutgoingRows.length > 0) {
         const operations = newOutgoingRows.map(({ row }) => ({
-          date: row[1],  // Skip row[0] which is delete button
-          amount: parseFloat(String(row[2]).replace(/[£,\s]/g, '')) || 0,
-          recipient: row[3] || 'Unknown',
-          purpose: row[4] || 'No description',
-          category: row[5] || 'Other',
-          approved_by: row[6] || currentUserName
+          date: row[0],
+          amount: parseFloat(String(row[1]).replace(/[£,\s]/g, '')) || 0,
+          recipient: row[2] || 'Unknown',
+          purpose: row[3] || 'No description',
+          category: row[4] || 'Other',
+          approved_by: row[5] || currentUserName
         }));
 
         try {
