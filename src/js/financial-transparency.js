@@ -584,29 +584,42 @@ function addDeleteButtons(type) {
     // Check if delete button already exists
     if (tr.querySelector('.delete-row-btn')) return;
 
+    // Create a cell for the delete button
+    const firstCell = tr.querySelector('td');
+    if (!firstCell) return;
+
+    // Insert a new cell at the beginning
+    const deleteCell = document.createElement('td');
+    deleteCell.style.cssText = `
+      width: 50px;
+      min-width: 50px;
+      max-width: 50px;
+      text-align: center;
+      padding: 5px;
+      background: #f8f9fa;
+      border-right: 1px solid #ddd;
+    `;
+
     // Create delete button
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'delete-row-btn';
     deleteBtn.innerHTML = '🗑️';
     deleteBtn.title = 'Delete this row';
     deleteBtn.style.cssText = `
-      position: absolute;
-      left: -40px;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 30px;
-      height: 30px;
+      width: 32px;
+      height: 32px;
       border: 1px solid #dc3545;
       background: #fff;
       color: #dc3545;
       border-radius: 4px;
       cursor: pointer;
       font-size: 16px;
-      display: flex;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
       opacity: 0.7;
       transition: all 0.2s;
+      padding: 0;
     `;
 
     deleteBtn.addEventListener('mouseenter', () => {
@@ -680,10 +693,31 @@ function addDeleteButtons(type) {
       }
     });
 
-    // Make tr position relative to contain absolute button
-    tr.style.position = 'relative';
-    tr.appendChild(deleteBtn);
+    // Add button to cell and cell to row
+    deleteCell.appendChild(deleteBtn);
+    tr.insertBefore(deleteCell, firstCell);
   });
+
+  // Also add header for the delete column
+  const thead = container.querySelector('thead tr');
+  if (thead && !thead.querySelector('.delete-header')) {
+    const deleteHeader = document.createElement('td');
+    deleteHeader.className = 'delete-header';
+    deleteHeader.innerHTML = 'Delete';
+    deleteHeader.style.cssText = `
+      width: 50px;
+      min-width: 50px;
+      max-width: 50px;
+      text-align: center;
+      font-weight: bold;
+      background: #f8f9fa;
+      border-right: 1px solid #ddd;
+    `;
+    const firstHeader = thead.querySelector('td');
+    if (firstHeader) {
+      thead.insertBefore(deleteHeader, firstHeader);
+    }
+  }
 }
 
 // ==================================================
