@@ -845,9 +845,29 @@ function toggleEditMode(enabled) {
     console.log('Outgoing sheet editable set to:', enabled, 'Current value:', outgoingSheet[0].options.editable);
   }
 
-  document.getElementById('saveBtn').disabled = !enabled;
-  document.getElementById('addRowBtn').disabled = !enabled;
-  document.getElementById('importBtn').disabled = !enabled;
+  // Show/hide authenticated user buttons
+  const saveBtn = document.getElementById('saveBtn');
+  const addRowBtn = document.getElementById('addRowBtn');
+  const importBtn = document.getElementById('importBtn');
+  const manageDeletedBtn = document.getElementById('manageDeletedBtn');
+
+  if (enabled) {
+    // Show buttons and enable them
+    saveBtn.style.display = 'inline-block';
+    saveBtn.disabled = false;
+    addRowBtn.style.display = 'inline-block';
+    addRowBtn.disabled = false;
+    importBtn.style.display = 'inline-block';
+    importBtn.disabled = false;
+    manageDeletedBtn.style.display = 'inline-block';
+  } else {
+    // Hide buttons
+    saveBtn.style.display = 'none';
+    addRowBtn.style.display = 'none';
+    importBtn.style.display = 'none';
+    manageDeletedBtn.style.display = 'none';
+  }
+
   document.getElementById('editBtn').textContent = enabled ? 'Disable Editing' : 'Enable Editing';
 
   if (enabled) {

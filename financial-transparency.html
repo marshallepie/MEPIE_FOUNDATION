@@ -389,12 +389,12 @@
 
     <div class="controls">
       <button id="editBtn" class="btn btn-primary">Enable Editing</button>
-      <button id="saveBtn" class="btn btn-secondary" disabled>Save Changes</button>
+      <button id="saveBtn" class="btn btn-secondary" disabled style="display: none;">Save Changes</button>
       <button id="exportBtn" class="btn btn-secondary">Export to CSV</button>
-      <button id="importBtn" class="btn btn-secondary" disabled>Import from CSV</button>
+      <button id="importBtn" class="btn btn-secondary" disabled style="display: none;">Import from CSV</button>
       <button id="exportPdfBtn" class="btn btn-secondary">Export to PDF</button>
-      <button id="addRowBtn" class="btn btn-secondary" disabled>Add Row</button>
-      <a href="/deleted-records.html" class="btn btn-secondary" style="text-decoration: none; display: inline-block;">Manage Deleted Records</a>
+      <button id="addRowBtn" class="btn btn-secondary" disabled style="display: none;">Add Row</button>
+      <a href="/deleted-records.html" id="manageDeletedBtn" class="btn btn-secondary" style="text-decoration: none; display: none;">Manage Deleted Records</a>
       <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
     </div>
 
