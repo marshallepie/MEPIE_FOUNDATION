@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Deleted Records - MEPIE Foundation</title>
+  <link rel="stylesheet" href="/src/css/main.css">
+  <style>
+    .admin-container {
+      max-width: 1200px;
+      margin: 40px auto;
+      padding: 20px;
+    }
+
+    .warning-box {
+      background: #fff3cd;
+      border: 2px solid #ffc107;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+
+    .warning-box h3 {
+      color: #856404;
+      margin-top: 0;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #ddd;
+    }
+
+    .tab {
+      padding: 10px 20px;
+      background: #f8f9fa;
+      border: none;
+      border-radius: 8px 8px 0 0;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.3s;
+    }
+
+    .tab.active {
+      background: #007bff;
+      color: white;
+    }
+
+    .records-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .records-table th {
+      background: #343a40;
+      color: white;
+      padding: 12px;
+      text-align: left;
+      font-weight: 600;
+    }
+
+    .records-table td {
+      padding: 12px;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .records-table tr:hover {
+      background: #f8f9fa;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s;
+      margin-right: 8px;
+    }
+
+    .btn-restore {
+      background: #28a745;
+      color: white;
+    }
+
+    .btn-restore:hover {
+      background: #218838;
+    }
+
+    .btn-delete {
+      background: #dc3545;
+      color: white;
+    }
+
+    .btn-delete:hover {
+      background: #c82333;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #6c757d;
+    }
+
+    .status-message {
+      padding: 12px 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .status-message.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .status-message.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #6c757d;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <nav>
+      <div class="nav-container">
+        <a href="/" class="logo">MEPIE Foundation</a>
+        <ul class="nav-links">
+          <li><a href="/financial-transparency.html">Back to Financial Transparency</a></li>
+        </ul>
+      </div>
+    </nav>
+  </header>
+
+  <main class="admin-container">
+    <h1>Manage Deleted Records</h1>
+
+    <div class="warning-box">
+      <h3>⚠️ Warning: Permanent Deletion</h3>
+      <p>
+        <strong>Soft Delete (Default):</strong> Records are hidden from the main view but preserved in the database for audit purposes.<br>
+        <strong>Hard Delete (Permanent):</strong> Records are permanently removed from the database. This action <strong>CANNOT BE UNDONE</strong>.
+      </p>
+      <p>Only use hard delete when you're absolutely certain the record should be permanently removed.</p>
+    </div>
+
+    <div id="statusMessage" class="status-message"></div>
+
+    <div class="tabs">
+      <button class="tab active" data-type="incoming">Incoming Funds</button>
+      <button class="tab" data-type="outgoing">Outgoing Funds</button>
+    </div>
+
+    <div id="loadingIndicator" class="loading">
+      Loading deleted records...
+    </div>
+
+    <div id="recordsContainer"></div>
+
+    <!-- Password Modal (reused from financial-transparency) -->
+    <div id="passwordModal" class="modal">
+      <div class="modal-content">
+        <h2>Authentication Required</h2>
+        <p>Please enter your credentials to manage deleted records.</p>
+        <select id="userSelect">
+          <option value="">Select your name...</option>
+          <option value="Marshall Epie">Marshall Epie</option>
+          <option value="Aruna Ramineni">Aruna Ramineni</option>
+          <option value="Fitz Shrowder">Fitz Shrowder</option>
+        </select>
+        <input type="password" id="passwordInput" placeholder="Enter password">
+        <div class="modal-buttons">
+          <button id="submitBtn" class="btn btn-primary">Login</button>
+          <button id="cancelBtn" class="btn btn-secondary">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { apiRequest } from '/src/js/api.js';
+
+    let sessionToken = localStorage.getItem('mepie_session_token');
+    let currentType = 'incoming';
+
+    // Check if authenticated
+    async function checkAuth() {
+      if (!sessionToken) {
+        showPasswordModal();
+        return false;
+      }
+
+      // Validate session
+      try {
+        const result = await apiRequest('finance-auth', {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'validate',
+            sessionToken
+          })
+        });
+
+        if (result.valid) {
+          return true;
+        } else {
+          showPasswordModal();
+          return false;
+        }
+      } catch (error) {
+        showPasswordModal();
+        return false;
+      }
+    }
+
+    function showPasswordModal() {
+      document.getElementById('passwordModal').classList.add('active');
+    }
+
+    function hidePasswordModal() {
+      document.getElementById('passwordModal').classList.remove('active');
+    }
+
+    // Authentication handlers
+    document.getElementById('submitBtn').addEventListener('click', async () => {
+      const userName = document.getElementById('userSelect').value;
+      const password = document.getElementById('passwordInput').value;
+
+      if (!userName || !password) {
+        showStatus('Please select your name and enter password', 'error');
+        return;
+      }
+
+      try {
+        const result = await apiRequest('finance-auth', {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'login',
+            userName,
+            password
+          })
+        });
+
+        if (result.success) {
+          sessionToken = result.sessionToken;
+          localStorage.setItem('mepie_session_token', sessionToken);
+          hidePasswordModal();
+          loadDeletedRecords();
+        } else {
+          showStatus('Authentication failed: ' + result.error, 'error');
+        }
+      } catch (error) {
+        showStatus('Authentication error: ' + error.message, 'error');
+      }
+    });
+
+    document.getElementById('cancelBtn').addEventListener('click', () => {
+      window.location.href = '/financial-transparency.html';
+    });
+
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentType = tab.dataset.type;
+        loadDeletedRecords();
+      });
+    });
+
+    async function loadDeletedRecords() {
+      const container = document.getElementById('recordsContainer');
+      const loading = document.getElementById('loadingIndicator');
+
+      loading.style.display = 'block';
+      container.innerHTML = '';
+
+      try {
+        const result = await apiRequest('finance-hard-delete', {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'list',
+            type: currentType,
+            sessionToken
+          })
+        });
+
+        loading.style.display = 'none';
+
+        if (!result.success || !result.data || result.data.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <h3>No deleted records</h3>
+              <p>There are no soft-deleted ${currentType} records.</p>
+            </div>
+          `;
+          return;
+        }
+
+        renderTable(result.data);
+      } catch (error) {
+        loading.style.display = 'none';
+        showStatus('Failed to load records: ' + error.message, 'error');
+      }
+    }
+
+    function renderTable(records) {
+      const container = document.getElementById('recordsContainer');
+
+      const columns = currentType === 'incoming'
+        ? ['Date', 'Amount', 'Source', 'Donor Initials', 'Net Income', 'Purpose', 'Approved By', 'Deleted By', 'Deleted At', 'Actions']
+        : ['Date', 'Amount', 'Recipient', 'Purpose', 'Category', 'Approved By', 'Deleted By', 'Deleted At', 'Actions'];
+
+      let html = '<table class="records-table"><thead><tr>';
+      columns.forEach(col => {
+        html += `<th>${col}</th>`;
+      });
+      html += '</tr></thead><tbody>';
+
+      records.forEach(record => {
+        html += '<tr>';
+        if (currentType === 'incoming') {
+          html += `
+            <td>${record.date}</td>
+            <td>£${parseFloat(record.amount).toFixed(2)}</td>
+            <td>${record.source}</td>
+            <td>${record.donor_initials || '-'}</td>
+            <td>£${parseFloat(record.net_income || 0).toFixed(2)}</td>
+            <td>${record.purpose_note || '-'}</td>
+            <td>${record.approved_by}</td>
+            <td>${record.deleted_by || '-'}</td>
+            <td>${new Date(record.deleted_at).toLocaleString()}</td>
+          `;
+        } else {
+          html += `
+            <td>${record.date}</td>
+            <td>£${parseFloat(record.amount).toFixed(2)}</td>
+            <td>${record.recipient}</td>
+            <td>${record.purpose}</td>
+            <td>${record.category}</td>
+            <td>${record.approved_by}</td>
+            <td>${record.deleted_by || '-'}</td>
+            <td>${new Date(record.deleted_at).toLocaleString()}</td>
+          `;
+        }
+        html += `
+          <td>
+            <button class="btn btn-restore" onclick="restoreRecord('${record.id}')">Restore</button>
+            <button class="btn btn-delete" onclick="hardDeleteRecord('${record.id}')">Permanently Delete</button>
+          </td>
+        </tr>`;
+      });
+
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
+    window.restoreRecord = async function(id) {
+      if (!confirm('Restore this record? It will appear back in the main financial transparency page.')) {
+        return;
+      }
+
+      try {
+        const result = await apiRequest('finance-hard-delete', {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'restore',
+            type: currentType,
+            id,
+            sessionToken
+          })
+        });
+
+        if (result.success) {
+          showStatus('Record restored successfully', 'success');
+          setTimeout(() => loadDeletedRecords(), 1000);
+        } else {
+          showStatus('Failed to restore: ' + result.error, 'error');
+        }
+      } catch (error) {
+        showStatus('Error: ' + error.message, 'error');
+      }
+    };
+
+    window.hardDeleteRecord = async function(id) {
+      const confirmed = confirm('⚠️ PERMANENTLY DELETE THIS RECORD?\n\nThis action CANNOT BE UNDONE.\n\nThe record will be completely removed from the database.\n\nAre you absolutely sure?');
+
+      if (!confirmed) return;
+
+      const doubleCheck = confirm('Final confirmation: Delete this record forever?');
+      if (!doubleCheck) return;
+
+      try {
+        const result = await apiRequest('finance-hard-delete', {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'hard-delete',
+            type: currentType,
+            id,
+            sessionToken
+          })
+        });
+
+        if (result.success) {
+          showStatus('Record permanently deleted', 'success');
+          setTimeout(() => loadDeletedRecords(), 1000);
+        } else {
+          showStatus('Failed to delete: ' + result.error, 'error');
+        }
+      } catch (error) {
+        showStatus('Error: ' + error.message, 'error');
+      }
+    };
+
+    function showStatus(message, type) {
+      const statusEl = document.getElementById('statusMessage');
+      statusEl.textContent = message;
+      statusEl.className = `status-message ${type}`;
+      statusEl.style.display = 'block';
+      setTimeout(() => {
+        statusEl.style.display = 'none';
+      }, 5000);
+    }
+
+    // Initialize
+    (async () => {
+      const isAuth = await checkAuth();
+      if (isAuth) {
+        loadDeletedRecords();
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -10,6 +10,7 @@ export default defineConfig({
         projects: resolve(__dirname, 'projects.html'),
         governance: resolve(__dirname, 'governance.html'),
         financial: resolve(__dirname, 'financial-transparency.html'),
+        deletedRecords: resolve(__dirname, 'deleted-records.html'),
         document: resolve(__dirname, 'governing-document.html'),
         policies: resolve(__dirname, 'policies.html'),
         contact: resolve(__dirname, 'contact.html'),
