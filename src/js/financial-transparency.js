@@ -2,8 +2,9 @@
 // MEPIE Financial Transparency - API-Integrated Version
 // ==================================================
 
+import { apiRequest } from './api.js';
+
 // Configuration
-const API_BASE = '/.netlify/functions';
 const EDIT_PASSWORD = window.FINANCE_EDIT_PASSWORD || 'mepie2024admin';
 
 // Session management
@@ -78,30 +79,7 @@ function updateCurrentUserBanner() {
 // API Functions
 // ==================================================
 
-async function apiRequest(endpoint, options = {}) {
-  const url = `${API_BASE}/${endpoint}`;
-
-  try {
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-      }
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || `HTTP ${response.status}`);
-    }
-
-    return data;
-  } catch (error) {
-    console.error(`API request failed: ${endpoint}`, error);
-    throw error;
-  }
-}
+// apiRequest is now imported from ./api.js
 
 async function authenticateUser(userName, password) {
   try {
