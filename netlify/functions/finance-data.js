@@ -11,7 +11,9 @@ const headers = {
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
   'Content-Type': 'application/json',
-  'Cache-Control': 'public, max-age=300' // Cache for 5 minutes
+  'Cache-Control': 'no-cache, no-store, must-revalidate', // Always fetch fresh data
+  'Pragma': 'no-cache', // HTTP 1.0 compatibility
+  'Expires': '0' // Proxies
 };
 
 /**
