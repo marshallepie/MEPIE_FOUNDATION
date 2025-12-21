@@ -322,7 +322,12 @@ exports.handler = async (event) => {
   }
 
   // Extract client info
-  const clientIp = event.headers['x-forwarded-for'] || event.headers['client-ip'];
+  let clientIp = event.headers['x-forwarded-for'] || event.headers['client-ip'];
+  // X-Forwarded-For can contain multiple IPs (client, proxy1, proxy2)
+  // Extract only the first IP (the client's real IP)
+  if (clientIp && clientIp.includes(',')) {
+    clientIp = clientIp.split(',')[0].trim();
+  }
   const userAgent = event.headers['user-agent'];
 
   // Determine action based on request
